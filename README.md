@@ -1,2 +1,2 @@
-# async-mutable-ntree
-A mutable n-tree with async support
+# ntree
+A mutable n-tree with async support.

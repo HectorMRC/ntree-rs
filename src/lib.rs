@@ -69,9 +69,50 @@ impl<T> Node<T> {
 
 #[cfg(feature = "sync")]
 impl<T> Node<T> {
-    /// Calls the given closure for each [`Node`] in the tree rooted by self.
-    /// The very first parameter of the closure is an immutable reference of the node being processed. While
-    /// the second one is a vector containing the results of the same closure for each child of the node.  
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    pub fn preorder<F>(&self, f: F)
+    where
+        F: Fn(&Self) + Copy,
+    {
+        f(self);
+        self.children().iter().for_each(|child| child.preorder(f));
+    }
+
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    pub fn preorder_mut<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Self) + Copy,
+    {
+        f(self);
+        self.children_mut()
+            .iter_mut()
+            .for_each(|child| child.preorder_mut(f));
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    pub fn postorder<F>(&self, f: F)
+    where
+        F: Fn(&Self) + Copy,
+    {
+        self.children().iter().for_each(|child| child.postorder(f));
+        f(self);
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    pub fn postorder_mut<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Self) + Copy,
+    {
+        self.children_mut()
+            .iter_mut()
+            .for_each(|child| child.postorder_mut(f));
+
+        f(self);
+    }
+
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method follows the post-order traversal, and so the second parameter of f is a vector
+    /// containing the returned value of f for each child in that node given as the first parameter.
     pub fn reduce<F, R>(&self, f: F) -> R
     where
         F: Fn(&Self, Vec<R>) -> R + Copy,
@@ -82,12 +123,13 @@ impl<T> Node<T> {
             .iter()
             .map(|child| child.reduce(f))
             .collect();
+
         f(self, results)
     }
 
-    /// Calls the given closure for each [`Node`] in the tree rooted by self.
-    /// The very first parameter of the closure is a mutable reference of the node being processed. While
-    /// the second one is a vector containing the results of the same closure for each child of the node.  
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method follows the post-order traversal, and so the second parameter of f is a vector
+    /// containing the returned value of f for each child in that node given as the first parameter.
     pub fn reduce_mut<F, R>(&mut self, mut f: F) -> R
     where
         F: FnMut(&mut Self, Vec<R>) -> R + Copy,
@@ -98,15 +140,95 @@ impl<T> Node<T> {
             .iter_mut()
             .map(|child| child.reduce_mut(f))
             .collect();
+
         f(self, results)
+    }
+
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method follows the pre-order traversal, and so the second parameter of f is the returned
+    /// value of calling f on the parent of that node given as the first parameter.
+    pub fn cascade<F, R>(&mut self, base: &R, mut f: F)
+    where
+        F: FnMut(&mut Self, &R) -> R + Copy,
+        R: Sized,
+    {
+        let base = f(self, base);
+        self.children_mut()
+            .iter_mut()
+            .for_each(|child| child.cascade(&base, f));
     }
 }
 
 #[cfg(feature = "async")]
 impl<T: Sync + Send> Node<T> {
-    /// Calls the given closure for each [`Node`] in the tree rooted by self.
-    /// The very first parameter of the closure is an immutable reference of the node being processed. While
-    /// the second one is a vector containing the results of the same closure for each child of the node.  
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    #[async_recursion]
+    pub async fn preorder<F>(&self, f: F)
+    where
+        F: Fn(&Self) + Copy + Sync + Send,
+    {
+        f(self);
+
+        let futures: Vec<_> = self
+            .children()
+            .iter()
+            .map(|child| child.preorder(f))
+            .collect();
+
+        join_all(futures).await;
+    }
+
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    #[async_recursion]
+    pub async fn preorder_mut<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Self) + Copy + Sync + Send,
+    {
+        f(self);
+        let futures: Vec<_> = self
+            .children_mut()
+            .iter_mut()
+            .map(|child| child.preorder_mut(f))
+            .collect();
+
+        join_all(futures).await;
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    #[async_recursion]
+    pub async fn postorder<F>(&self, f: F)
+    where
+        F: Fn(&Self) + Copy + Sync + Send,
+    {
+        let futures: Vec<_> = self
+            .children()
+            .iter()
+            .map(|child| child.postorder(f))
+            .collect();
+
+        join_all(futures).await;
+        f(self);
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    #[async_recursion]
+    pub async fn postorder_mut<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Self) + Copy + Sync + Send,
+    {
+        let futures: Vec<_> = self
+            .children_mut()
+            .iter_mut()
+            .map(|child| child.postorder_mut(f))
+            .collect();
+
+        join_all(futures).await;
+        f(self);
+    }
+
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method follows the post-order traversal, and so the second parameter of f is a vector
+    /// containing the returned value of f for each child in that node given as the first parameter.
     #[async_recursion]
     pub async fn reduce<F, R>(&self, f: F) -> R
     where
@@ -123,9 +245,9 @@ impl<T: Sync + Send> Node<T> {
         f(self, results)
     }
 
-    /// Calls the given closure for each [`Node`] in the tree rooted by self.
-    /// The very first parameter of the closure is a mutable reference of the node being processed. While
-    /// the second one is a vector containing the results of the same closure for each child of the node.  
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method follows the post-order traversal, and so the second parameter of f is a vector
+    /// containing the returned value of f for each child in that node given as the first parameter.
     #[async_recursion]
     pub async fn reduce_mut<F, R>(&mut self, f: F) -> R
     where
@@ -141,10 +263,30 @@ impl<T: Sync + Send> Node<T> {
         let results = join_all(futures).await;
         f(self, results)
     }
+
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method follows the pre-order traversal, and so the second parameter of f is the returned
+    /// value of calling f on the parent of that node given as the first parameter.
+    #[async_recursion]
+    pub async fn cascade<F, R>(&mut self, base: &R, mut f: F)
+    where
+        F: FnMut(&mut Self, &R) -> R + Copy + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        let base = f(self, base);
+        let futures = self
+            .children_mut()
+            .iter_mut()
+            .map(|child| child.cascade(&base, f));
+
+        join_all(futures).await;
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(dead_code)]
+
     use crate::Node;
 
     fn init_tree() -> Node<usize> {
@@ -188,25 +330,24 @@ mod tests {
 
     #[cfg(feature = "sync")]
     mod sync_tests {
-        use crate::Node;
-
-        #[test]
-        fn reduce_should_perform_postorder_traversal() {
-            let root = super::init_tree();
-            let got = root.reduce(super::pre_order);
-            assert_eq!(got, vec![1, 3, 2, 0]);
-        }
 
         #[test]
         fn reduce_should_perform_preorder_traversal() {
             let root = super::init_tree();
-            let got = root.reduce(super::post_order);
+            let got = root.reduce(super::pre_order);
             assert_eq!(got, vec![0, 1, 2, 3]);
         }
 
         #[test]
-        fn reduce_mut_should_mutate_self() {
+        fn reduce_should_perform_postorder_traversal() {
             let root = super::init_tree();
+            let got = root.reduce(super::post_order);
+            assert_eq!(got, vec![1, 3, 2, 0]);
+        }
+
+        #[test]
+        fn reduce_mut_should_mutate_self() {
+            let mut root = super::init_tree();
             root.reduce_mut(super::mutate_tree);
             let got = root.reduce(super::pre_order);
             assert_eq!(got, vec![0, 1, 2, 2, 3, 4, 10]);
