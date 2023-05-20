@@ -13,5 +13,5 @@ async-recursion = { version = "1.0.4", optional = true }
 tokio = { version = "1.24.1", features = ["macros", "rt-multi-thread"] }
 
 [features]
-default = []
+default = ["async"]
 async = ["futures", "async-recursion"]
