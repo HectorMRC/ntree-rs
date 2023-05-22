@@ -1,10 +1,7 @@
 //! Traversable node definition
 
-mod iterator;
-
 #[cfg(feature = "async")]
 mod node_async;
-use iterator::PreorderIter;
 #[cfg(feature = "async")]
 pub use node_async::*;
 
@@ -78,11 +75,6 @@ impl<T> Node<T> {
             .fold(self.children.len(), |len, node| -> usize {
                 len.saturating_add(node.size())
             })
-    }
-
-    /// Returns an immutable iterator that traverses the tree rooted by self in pre-order.
-    pub fn preorder(&self) -> impl Iterator<Item = &Self> {
-        PreorderIter::new(self)
     }
 }
 

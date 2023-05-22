@@ -3,6 +3,74 @@
 use crate::Node;
 
 impl<T> Node<T> {
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    pub fn preorder<F>(&self, mut f: F)
+    where
+        F: FnMut(&Self),
+    {
+        pub fn immersion<T, F>(root: &Node<T>, f: &mut F)
+        where
+            F: FnMut(&Node<T>),
+        {
+            f(root);
+            root.children().iter().for_each(|child| immersion(child, f));
+        }
+
+        immersion(self, &mut f)
+    }
+
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    pub fn preorder_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut Self),
+    {
+        pub fn immersion_mut<T, F>(root: &mut Node<T>, f: &mut F)
+        where
+            F: FnMut(&mut Node<T>),
+        {
+            f(root);
+            root.children_mut()
+                .iter_mut()
+                .for_each(|child| immersion_mut(child, f));
+        }
+
+        immersion_mut(self, &mut f)
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    pub fn postorder<F>(&self, mut f: F)
+    where
+        F: FnMut(&Self),
+    {
+        pub fn immersion<T, F>(root: &Node<T>, f: &mut F)
+        where
+            F: FnMut(&Node<T>),
+        {
+            root.children().iter().for_each(|child| immersion(child, f));
+            f(root);
+        }
+
+        immersion(self, &mut f)
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    pub fn postorder_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut Self),
+    {
+        pub fn immersion_mut<T, F>(root: &mut Node<T>, f: &mut F)
+        where
+            F: FnMut(&mut Node<T>),
+        {
+            root.children_mut()
+                .iter_mut()
+                .for_each(|child| immersion_mut(child, f));
+            f(root);
+        }
+
+        immersion_mut(self, &mut f)
+    }
+
     /// Calls the given closure recursivelly along the tree rooted by self.
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
     /// containing the returned value of f for each child in that node given as the first parameter.
@@ -11,21 +79,20 @@ impl<T> Node<T> {
         F: FnMut(&Self, Vec<R>) -> R,
         R: Sized,
     {
-        self.reduce_immersion(&mut f)
-    }
+        fn immersion<T, F, R>(root: &Node<T>, f: &mut F) -> R
+        where
+            F: FnMut(&Node<T>, Vec<R>) -> R,
+        {
+            let results = root
+                .children()
+                .iter()
+                .map(|child| immersion(child, f))
+                .collect();
 
-    fn reduce_immersion<F, R>(&self, f: &mut F) -> R
-    where
-        F: FnMut(&Self, Vec<R>) -> R,
-        R: Sized,
-    {
-        let results = self
-            .children()
-            .iter()
-            .map(|child| child.reduce_immersion(f))
-            .collect();
+            f(root, results)
+        }
 
-        f(self, results)
+        immersion(self, &mut f)
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -36,21 +103,20 @@ impl<T> Node<T> {
         F: FnMut(&mut Self, Vec<R>) -> R,
         R: Sized,
     {
-        self.reduce_mut_immersion(&mut f)
-    }
+        pub fn immersion_mut<T, F, R>(root: &mut Node<T>, f: &mut F) -> R
+        where
+            F: FnMut(&mut Node<T>, Vec<R>) -> R,
+        {
+            let results = root
+                .children_mut()
+                .iter_mut()
+                .map(|child| immersion_mut(child, f))
+                .collect();
 
-    pub fn reduce_mut_immersion<F, R>(&mut self, f: &mut F) -> R
-    where
-        F: FnMut(&mut Self, Vec<R>) -> R,
-        R: Sized,
-    {
-        let results = self
-            .children_mut()
-            .iter_mut()
-            .map(|child| child.reduce_mut_immersion(f))
-            .collect();
+            f(root, results)
+        }
 
-        f(self, results)
+        immersion_mut(self, &mut f)
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -61,18 +127,17 @@ impl<T> Node<T> {
         F: FnMut(&Self, &R) -> R,
         R: Sized,
     {
-        self.cascade_immersion(&base, &mut f);
-    }
+        pub fn immersion<T, F, R>(root: &Node<T>, base: &R, f: &mut F)
+        where
+            F: FnMut(&Node<T>, &R) -> R,
+        {
+            let base = f(root, base);
+            root.children()
+                .iter()
+                .for_each(|child| immersion(child, &base, f));
+        }
 
-    pub fn cascade_immersion<F, R>(&self, base: &R, f: &mut F)
-    where
-        F: FnMut(&Self, &R) -> R,
-        R: Sized,
-    {
-        let base = f(self, base);
-        self.children()
-            .iter()
-            .for_each(|child| child.cascade_immersion(&base, f));
+        immersion(self, &base, &mut f);
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -83,24 +148,104 @@ impl<T> Node<T> {
         F: FnMut(&mut Self, &R) -> R,
         R: Sized,
     {
-        self.cascade_mut_immersion(&base, &mut f);
-    }
+        fn immersion_mut<T, F, R>(root: &mut Node<T>, base: &R, f: &mut F)
+        where
+            F: FnMut(&mut Node<T>, &R) -> R,
+        {
+            let base = f(root, base);
+            root.children_mut()
+                .iter_mut()
+                .for_each(|child| immersion_mut(child, &base, f));
+        }
 
-    fn cascade_mut_immersion<F, R>(&mut self, base: &R, f: &mut F)
-    where
-        F: FnMut(&mut Self, &R) -> R,
-        R: Sized,
-    {
-        let base = f(self, base);
-        self.children_mut()
-            .iter_mut()
-            .for_each(|child| child.cascade_mut_immersion(&base, f));
+        immersion_mut(self, &base, &mut f);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_node_preorder() {
+        let mut node = Node::new(10);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let mut result = Vec::new();
+        node.preorder(|n| result.push(*n.value()));
+
+        assert_eq!(result, vec![10, 20, 40, 30, 50]);
+    }
+
+    #[test]
+    fn test_node_preorder_mut() {
+        let mut node = Node::new(10_i32);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let mut result = Vec::new();
+        node.preorder_mut(|n| {
+            n.set_value(n.value().saturating_add(1));
+            result.push(*n.value())
+        });
+
+        assert_eq!(result, vec![11, 21, 41, 31, 51]);
+    }
+
+    #[test]
+    fn test_node_postorder() {
+        let mut node = Node::new(10);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let mut result = Vec::new();
+        node.postorder(|n| result.push(*n.value()));
+        assert_eq!(result, vec![40, 20, 50, 30, 10]);
+    }
+
+    #[test]
+    fn test_node_postorder_mut() {
+        let mut node = Node::new(10_i32);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let mut result = Vec::new();
+        node.postorder_mut(|n| {
+            n.set_value(n.value().saturating_add(1));
+            result.push(*n.value())
+        });
+
+        assert_eq!(result, vec![41, 21, 51, 31, 11]);
+    }
 
     #[test]
     fn test_node_reduce() {
@@ -159,7 +304,7 @@ mod tests {
             n.value() + parent_value
         });
 
-        assert_eq!(result, vec![10, 30, 40, 40, 50]);
+        assert_eq!(result, vec![10, 30, 70, 40, 90]);
     }
 
     #[test]

@@ -5,42 +5,164 @@ use async_recursion::async_recursion;
 use futures::future::join_all;
 
 impl<T: Sync + Send> Node<T> {
-    /// Calls the given closure recursivelly along the tree rooted by self.
-    /// This method traverses the tree in post-order, and so the second parameter of f is a vector
-    /// containing the returned value of f for each child in that node given as the first parameter.
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
     #[async_recursion]
-    pub async fn reduce<F, R>(&self, mut f: F) -> R
+    pub async fn preorder<F>(&self, f: F)
     where
-        F: FnMut(&Self, Vec<R>) -> R + Copy + Sync + Send,
-        R: Sized + Sync + Send,
+        F: Fn(&Self) + Sync + Send,
     {
-        let futures: Vec<_> = self
-            .children()
-            .iter()
-            .map(|child| child.reduce(f))
-            .collect();
+        #[async_recursion]
+        pub async fn immersion<T, F>(root: &Node<T>, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&Node<T>) + Sync + Send,
+        {
+            f(root);
 
-        let results = join_all(futures).await;
-        f(self, results)
+            let futures: Vec<_> = root
+                .children()
+                .iter()
+                .map(|child| immersion(child, f))
+                .collect();
+
+            join_all(futures).await;
+        }
+
+        immersion(self, &f).await
+    }
+
+    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    #[async_recursion]
+    pub async fn preorder_mut<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Self) + Sync + Send,
+    {
+        #[async_recursion]
+        pub async fn immersion_mut<T, F>(root: &mut Node<T>, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&mut Node<T>) + Sync + Send,
+        {
+            f(root);
+
+            let futures: Vec<_> = root
+                .children_mut()
+                .iter_mut()
+                .map(|child| immersion_mut(child, f))
+                .collect();
+
+            join_all(futures).await;
+        }
+
+        immersion_mut(self, &f).await
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    #[async_recursion]
+    pub async fn postorder<F>(&self, f: F)
+    where
+        F: Fn(&Self) + Sync + Send,
+    {
+        #[async_recursion]
+        pub async fn immersion<T, F>(root: &Node<T>, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&Node<T>) + Sync + Send,
+        {
+            let futures: Vec<_> = root
+                .children()
+                .iter()
+                .map(|child| immersion(child, f))
+                .collect();
+
+            join_all(futures).await;
+            f(root);
+        }
+
+        immersion(self, &f).await
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    #[async_recursion]
+    pub async fn postorder_mut<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Self) + Sync + Send,
+    {
+        #[async_recursion]
+        pub async fn immersion_mut<T, F>(root: &mut Node<T>, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&mut Node<T>) + Sync + Send,
+        {
+            let futures: Vec<_> = root
+                .children_mut()
+                .iter_mut()
+                .map(|child| immersion_mut(child, f))
+                .collect();
+
+            join_all(futures).await;
+            f(root);
+        }
+
+        immersion_mut(self, &f).await
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
     /// containing the returned value of f for each child in that node given as the first parameter.
     #[async_recursion]
-    pub async fn reduce_mut<F, R>(&mut self, mut f: F) -> R
+    pub async fn reduce<F, R>(&self, f: F) -> R
     where
-        F: FnMut(&mut Self, Vec<R>) -> R + Copy + Sync + Send,
+        F: Fn(&Self, Vec<R>) -> R + Sync + Send,
         R: Sized + Sync + Send,
     {
-        let futures: Vec<_> = self
-            .children_mut()
-            .iter_mut()
-            .map(|child| child.reduce_mut(f))
-            .collect();
+        #[async_recursion]
+        async fn immersion<T, F, R>(root: &Node<T>, f: &F) -> R
+        where
+            T: Sync + Send,
+            F: Fn(&Node<T>, Vec<R>) -> R + Sync + Send,
+            R: Sized + Sync + Send,
+        {
+            let futures: Vec<_> = root
+                .children()
+                .iter()
+                .map(|child| immersion(child, f))
+                .collect();
 
-        let results = join_all(futures).await;
-        f(self, results)
+            let results = join_all(futures).await;
+            f(root, results)
+        }
+
+        immersion(self, &f).await
+    }
+
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method traverses the tree in post-order, and so the second parameter of f is a vector
+    /// containing the returned value of f for each child in that node given as the first parameter.
+    #[async_recursion]
+    pub async fn reduce_mut<F, R>(&mut self, f: F) -> R
+    where
+        F: Fn(&mut Self, Vec<R>) -> R + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        #[async_recursion]
+        async fn immersion_mut<T, F, R>(root: &mut Node<T>, f: &F) -> R
+        where
+            T: Sync + Send,
+            F: Fn(&mut Node<T>, Vec<R>) -> R + Sync + Send,
+            R: Sized + Sync + Send,
+        {
+            let futures: Vec<_> = root
+                .children_mut()
+                .iter_mut()
+                .map(|child| immersion_mut(child, f))
+                .collect();
+
+            let results = join_all(futures).await;
+            f(root, results)
+        }
+
+        immersion_mut(self, &f).await
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -52,28 +174,132 @@ impl<T: Sync + Send> Node<T> {
         F: Fn(&mut Self, &R) -> R + Sync + Send,
         R: Sized + Sync + Send,
     {
-        self.cascade_immersion(&base, &f).await
-    }
+        #[async_recursion]
+        async fn immersion<T, F, R>(root: &mut Node<T>, base: &R, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&mut Node<T>, &R) -> R + Sync + Send,
+            R: Sized + Sync + Send,
+        {
+            let base = f(root, base);
+            let futures = root
+                .children_mut()
+                .iter_mut()
+                .map(|child| immersion(child, &base, f));
 
-    #[async_recursion]
-    async fn cascade_immersion<F, R>(&mut self, base: &R, f: &F)
-    where
-        F: Fn(&mut Self, &R) -> R + Sync + Send,
-        R: Sized + Sync + Send,
-    {
-        let base = f(self, base);
-        let futures = self
-            .children_mut()
-            .iter_mut()
-            .map(|child| child.cascade_immersion(&base, f));
+            join_all(futures).await;
+        }
 
-        join_all(futures).await;
+        immersion(self, &base, &f).await
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Mutex};
+
+    #[tokio::test]
+    async fn test_node_preorder() {
+        let mut node = Node::new(10);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let result = Arc::new(Mutex::new(Vec::new()));
+        node.preorder(|n| result.clone().lock().unwrap().push(*n.value()))
+            .await;
+
+        assert!(result.lock().unwrap().contains(&10));
+        assert!(result.lock().unwrap().contains(&20));
+        assert!(result.lock().unwrap().contains(&30));
+        assert!(result.lock().unwrap().contains(&40));
+        assert!(result.lock().unwrap().contains(&50));
+    }
+
+    #[tokio::test]
+    async fn test_node_preorder_mut() {
+        let mut node = Node::new(10_i32);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let result = Arc::new(Mutex::new(Vec::new()));
+        node.preorder_mut(|n| {
+            n.set_value(n.value().saturating_add(1));
+            result.clone().lock().unwrap().push(*n.value())
+        })
+        .await;
+
+        assert!(result.lock().unwrap().contains(&11));
+        assert!(result.lock().unwrap().contains(&21));
+        assert!(result.lock().unwrap().contains(&31));
+        assert!(result.lock().unwrap().contains(&41));
+        assert!(result.lock().unwrap().contains(&51));
+    }
+
+    #[tokio::test]
+    async fn test_node_postorder() {
+        let mut node = Node::new(10);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let result = Arc::new(Mutex::new(Vec::new()));
+        node.postorder(|n| result.clone().lock().unwrap().push(*n.value()))
+            .await;
+
+        assert!(result.lock().unwrap().contains(&40));
+        assert!(result.lock().unwrap().contains(&20));
+        assert!(result.lock().unwrap().contains(&50));
+        assert!(result.lock().unwrap().contains(&30));
+        assert!(result.lock().unwrap().contains(&10));
+    }
+
+    #[tokio::test]
+    async fn test_node_postorder_mut() {
+        let mut node = Node::new(10_i32);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        node.add_child(child1);
+        node.add_child(child2);
+
+        let result = Arc::new(Mutex::new(Vec::new()));
+        node.postorder_mut(|n| {
+            n.set_value(n.value().saturating_add(1));
+            result.clone().lock().unwrap().push(*n.value());
+        })
+        .await;
+
+        assert!(result.lock().unwrap().contains(&41));
+        assert!(result.lock().unwrap().contains(&21));
+        assert!(result.lock().unwrap().contains(&51));
+        assert!(result.lock().unwrap().contains(&31));
+        assert!(result.lock().unwrap().contains(&11));
+    }
 
     #[tokio::test]
     async fn test_node_reduce() {
