@@ -1,14 +1,14 @@
 //! Traversable node definition
 
 #[cfg(feature = "async")]
-mod node_async;
+mod r#async;
 #[cfg(feature = "async")]
-pub use node_async::*;
+pub use r#async::*;
 
 #[cfg(not(feature = "async"))]
-mod node_sync;
+mod sync;
 #[cfg(not(feature = "async"))]
-pub use node_sync::*;
+pub use sync::*;
 
 /// Represents the minimum unit in a tree, containing a value of type T and all
 /// those nodes children of the node itself, if any.
