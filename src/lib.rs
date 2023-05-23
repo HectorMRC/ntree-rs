@@ -67,14 +67,25 @@ impl<T> Node<T> {
         self.children.len()
     }
 
-    /// Returns the number of descendants the node has. This method return 0 if,
-    /// and only if, the node has no children.
+    /// Returns the number of descendants the node has. This method return 0 if, and only if,
+    /// the node has no children.
     pub fn size(&self) -> usize {
         self.children
             .iter()
             .fold(self.children.len(), |len, node| -> usize {
                 len.saturating_add(node.size())
             })
+    }
+
+    /// Returns the length of the longest branch in the tree rooted by self. Also known as the
+    /// height of the tree. This method return 1 if, and only if, the node has no children.
+    pub fn height(&self) -> usize {
+        self.children
+            .iter()
+            .map(|node| node.height())
+            .max()
+            .unwrap_or_default()
+            .saturating_add(1)
     }
 }
 
@@ -126,5 +137,25 @@ mod tests {
         root.add_child(child2);
 
         assert_eq!(root.size(), 5);
+    }
+
+    #[test]
+    fn test_node_height() {
+        let mut root = Node::new(10);
+        let mut child1 = Node::new(20);
+        let mut child2 = Node::new(30);
+        let grandchild1 = Node::new(40);
+        let grandchild2 = Node::new(50);
+        let grandchild3 = Node::new(60);
+
+        assert_eq!(root.height(), 1);
+
+        child1.add_child(grandchild1);
+        child2.add_child(grandchild2);
+        child2.add_child(grandchild3);
+        root.add_child(child1);
+        root.add_child(child2);
+
+        assert_eq!(root.height(), 3);
     }
 }
