@@ -10,6 +10,11 @@ mod sync;
 #[cfg(not(feature = "async"))]
 pub use sync::*;
 
+#[cfg(feature = "macros")]
+mod macros;
+#[cfg(feature = "macros")]
+pub use macros::*;
+
 /// Represents the minimum unit in a tree, containing a value of type T and all
 /// those nodes children of the node itself, if any.
 #[derive(Debug)]

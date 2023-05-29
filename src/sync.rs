@@ -165,41 +165,24 @@ impl<T> Node<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::macros::node;
 
     #[test]
     fn test_node_preorder() {
-        let mut node = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        node.add_child(child1);
-        node.add_child(child2);
+        let root = node![10, node![20, node![40]], node![30, node!(50)]];
 
         let mut result = Vec::new();
-        node.preorder(|n| result.push(*n.value()));
+        root.preorder(|n| result.push(*n.value()));
 
         assert_eq!(result, vec![10, 20, 40, 30, 50]);
     }
 
     #[test]
     fn test_node_preorder_mut() {
-        let mut node = Node::new(10_i32);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        node.add_child(child1);
-        node.add_child(child2);
+        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
 
         let mut result = Vec::new();
-        node.preorder_mut(|n| {
+        root.preorder_mut(|n| {
             n.set_value(n.value().saturating_add(1));
             result.push(*n.value())
         });
@@ -209,37 +192,19 @@ mod tests {
 
     #[test]
     fn test_node_postorder() {
-        let mut node = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        node.add_child(child1);
-        node.add_child(child2);
+        let root = node![10, node![20, node![40]], node![30, node!(50)]];
 
         let mut result = Vec::new();
-        node.postorder(|n| result.push(*n.value()));
+        root.postorder(|n| result.push(*n.value()));
         assert_eq!(result, vec![40, 20, 50, 30, 10]);
     }
 
     #[test]
     fn test_node_postorder_mut() {
-        let mut node = Node::new(10_i32);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        node.add_child(child1);
-        node.add_child(child2);
+        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
 
         let mut result = Vec::new();
-        node.postorder_mut(|n| {
+        root.postorder_mut(|n| {
             n.set_value(n.value().saturating_add(1));
             result.push(*n.value())
         });
@@ -249,16 +214,7 @@ mod tests {
 
     #[test]
     fn test_node_reduce() {
-        let mut root = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        root.add_child(child1);
-        root.add_child(child2);
+        let root = node![10, node![20, node![40]], node![30, node!(50)]];
 
         let sum = root.reduce(|n, results| n.value() + results.iter().sum::<i32>());
         assert_eq!(sum, 150);
@@ -266,16 +222,7 @@ mod tests {
 
     #[test]
     fn test_node_reduce_mut() {
-        let mut root = Node::new(10_i32);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        root.add_child(child1);
-        root.add_child(child2);
+        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
 
         let sum = root.reduce_mut(|n, results| {
             n.set_value(n.value().saturating_add(1));
@@ -287,19 +234,10 @@ mod tests {
 
     #[test]
     fn test_node_cascade() {
-        let mut node = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        node.add_child(child1);
-        node.add_child(child2);
+        let root = node![10, node![20, node![40]], node![30, node!(50)]];
 
         let mut result = Vec::new();
-        node.cascade(0, |n, parent_value| {
+        root.cascade(0, |n, parent_value| {
             result.push(n.value() + parent_value);
             n.value() + parent_value
         });
@@ -309,16 +247,7 @@ mod tests {
 
     #[test]
     fn test_node_cascade_mut() {
-        let mut root = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        root.add_child(child1);
-        root.add_child(child2);
+        let mut root = node![10, node![20, node![40]], node![30, node!(50)]];
 
         root.cascade_mut(0, |n, parent_value| {
             let next = n.value() + parent_value;
