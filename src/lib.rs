@@ -83,7 +83,7 @@ impl<T> Node<T> {
     }
 
     /// Returns the length of the longest branch in the tree rooted by self. Also known as the
-    /// height of the tree. This method return 1 if, and only if, the node has no children.
+    /// height of the tree. This method returns 1 if, and only if, the node has no children.
     pub fn height(&self) -> usize {
         self.children
             .iter()

@@ -5,7 +5,7 @@ use async_recursion::async_recursion;
 use futures::future::join_all;
 
 impl<T: Sync + Send> Node<T> {
-    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self following then pre-order traversal.
     #[async_recursion]
     pub async fn preorder<F>(&self, f: F)
     where
@@ -31,7 +31,7 @@ impl<T: Sync + Send> Node<T> {
         immersion(self, &f).await
     }
 
-    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self following then pre-order traversal.
     #[async_recursion]
     pub async fn preorder_mut<F>(&mut self, f: F)
     where

@@ -3,7 +3,7 @@
 use crate::Node;
 
 impl<T> Node<T> {
-    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self following then pre-order traversal.
     pub fn preorder<F>(&self, mut f: F)
     where
         F: FnMut(&Self),
@@ -19,7 +19,7 @@ impl<T> Node<T> {
         immersion(self, &mut f)
     }
 
-    /// Calls the given closure for each node in the tree rooted by selffollowing then pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self following then pre-order traversal.
     pub fn preorder_mut<F>(&mut self, mut f: F)
     where
         F: FnMut(&mut Self),
