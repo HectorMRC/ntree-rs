@@ -230,7 +230,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_preorder() {
-        let root = node![10, node![20, node![40]], node![30, node!(50)]];
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
         root.preorder(|n| result.clone().lock().unwrap().push(*n.value()))
@@ -245,7 +245,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_preorder_mut() {
-        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
+        let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
         root.preorder_mut(|n| {
@@ -263,7 +263,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_postorder() {
-        let root = node![10, node![20, node![40]], node![30, node!(50)]];
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
         root.postorder(|n| result.clone().lock().unwrap().push(*n.value()))
@@ -278,7 +278,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_postorder_mut() {
-        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
+        let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
         root.postorder_mut(|n| {
@@ -296,7 +296,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_reduce() {
-        let root = node![10, node![20, node![40]], node![30, node!(50)]];
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let sum = root
             .reduce(|n, results| n.value() + results.iter().sum::<i32>())
@@ -307,7 +307,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_reduce_mut() {
-        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
+        let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let sum = root
             .reduce_mut(|n, results| {
@@ -321,7 +321,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_cascade() {
-        let root = node![10, node![20, node![40]], node![30, node!(50)]];
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
         root.cascade(0, |n, parent_value| {
@@ -340,7 +340,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_cascade_mut() {
-        let mut root = node![10, node![20, node![40]], node![30, node!(50)]];
+        let mut root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         root.cascade_mut(0, |n, parent_value| {
             let next = n.value() + parent_value;

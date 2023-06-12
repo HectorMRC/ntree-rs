@@ -1,0 +1,13 @@
+[package]
+name = "ntree-macros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ntree-rs = { path = "../ntree" }
+quote = "1.0.28"
+syn = "2.0.18"
+
+[lib]
+path = "src/lib.rs"
+proc-macro = true

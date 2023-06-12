@@ -1,18 +1,5 @@
-[package]
-name = "ntree-rs"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-futures = { version = "0.3.28", optional = true }
-async-recursion = { version = "1.0.4", optional = true }
-
-[dev-dependencies]
-tokio = { version = "1.24.1", features = ["macros", "rt-multi-thread"] }
-
-[features]
-default = ["macros"]
-async = ["futures", "async-recursion"]
-macros = []
+[workspace]
+members = [
+    "ntree",
+    "ntree-macros"
+]

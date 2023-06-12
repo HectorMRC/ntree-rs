@@ -10,17 +10,22 @@ mod sync;
 #[cfg(not(feature = "async"))]
 pub use sync::*;
 
-#[cfg(feature = "macros")]
-mod macros;
-#[cfg(feature = "macros")]
-pub use macros::*;
+#[macro_export]
+macro_rules! node {
+    ($value:expr $(,$($children:expr),*)?) => (
+        Node {
+            value: $value,
+            children: vec![ $($($children),*)? ]
+        }
+    )
+}
 
 /// Represents the minimum unit in a tree, containing a value of type T and all
 /// those nodes children of the node itself, if any.
 #[derive(Debug)]
 pub struct Node<T> {
-    value: T,
-    children: Vec<Node<T>>,
+    pub value: T,
+    pub children: Vec<Node<T>>,
 }
 
 impl<T> Node<T> {
@@ -94,6 +99,21 @@ impl<T> Node<T> {
     }
 }
 
+impl<T: Clone> Clone for Node<T> {
+    fn clone(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+            children: self.children.clone(),
+        }
+    }
+}
+
+impl<T: PartialEq> PartialEq for Node<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value && self.children == other.children
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,18 +127,13 @@ mod tests {
 
     #[test]
     fn test_node_add_child() {
-        let mut root = Node::new(10);
-        assert_eq!(root.add_child(Node::new(20)), 1);
-        assert_eq!(root.add_child(Node::new(30)), 2);
+        let root = node!(10, node!(20), node!(30));
         assert_eq!(root.children_len(), 2);
     }
 
     #[test]
     fn test_node_remove_child() {
-        let mut root = Node::new(10);
-        root.add_child(Node::new(20));
-        root.add_child(Node::new(30));
-
+        let mut root = node!(10, node!(20), node!(30));
         let removed = root.remove_child(0);
         assert_eq!(removed.unwrap().value(), &20);
         assert_eq!(root.children_len(), 1);
@@ -126,41 +141,24 @@ mod tests {
 
     #[test]
     fn test_node_size() {
-        let mut root = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-        let grandchild3 = Node::new(60);
-
-        assert_eq!(root.size(), 0);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        child2.add_child(grandchild3);
-        root.add_child(child1);
-        root.add_child(child2);
-
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50), node!(60)));
         assert_eq!(root.size(), 5);
     }
 
     #[test]
     fn test_node_height() {
-        let mut root = Node::new(10);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-        let grandchild3 = Node::new(60);
-
-        assert_eq!(root.height(), 1);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        child2.add_child(grandchild3);
-        root.add_child(child1);
-        root.add_child(child2);
-
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50), node!(60)));
         assert_eq!(root.height(), 3);
+    }
+
+    #[test]
+    fn test_node_copy() {
+        let original = node!(10, node!(20), node!(30));
+        let mut copy = original.clone();
+
+        assert_eq!(copy, original);
+
+        copy.remove_child(0);
+        assert_ne!(copy, original);
     }
 }
