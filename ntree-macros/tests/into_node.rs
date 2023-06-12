@@ -4,8 +4,8 @@ use ntree_rs::{node, Node};
 #[test]
 fn test_into_node_macro() {
     #[derive(Debug, IntoNode, PartialEq)]
-    struct Item(String);
+    struct Item(&'static str);
 
-    let node: Node<Item> = Item("test".to_string()).into();
-    assert_eq!(node, node!(Item("test".to_string())));
+    let node: Node<Item> = Item("test").into();
+    assert_eq!(node, node!(Item("test")));
 }
