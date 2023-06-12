@@ -169,13 +169,41 @@ impl<T: Sync + Send> Node<T> {
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
     #[async_recursion]
-    pub async fn cascade<F, R>(&mut self, base: R, f: F)
+    pub async fn cascade<F, R>(&self, base: R, f: F)
+    where
+        F: Fn(&Self, &R) -> R + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        #[async_recursion]
+        async fn immersion<T, F, R>(root: &Node<T>, base: &R, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&Node<T>, &R) -> R + Sync + Send,
+            R: Sized + Sync + Send,
+        {
+            let base = f(root, base);
+            let futures = root
+                .children()
+                .iter()
+                .map(|child| immersion(child, &base, f));
+
+            join_all(futures).await;
+        }
+
+        immersion(self, &base, &f).await
+    }
+
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
+    /// value of calling f on the parent of that node given as the first parameter.
+    #[async_recursion]
+    pub async fn cascade_mut<F, R>(&mut self, base: R, f: F)
     where
         F: Fn(&mut Self, &R) -> R + Sync + Send,
         R: Sized + Sync + Send,
     {
         #[async_recursion]
-        async fn immersion<T, F, R>(root: &mut Node<T>, base: &R, f: &F)
+        async fn immersion_mut<T, F, R>(root: &mut Node<T>, base: &R, f: &F)
         where
             T: Sync + Send,
             F: Fn(&mut Node<T>, &R) -> R + Sync + Send,
@@ -185,12 +213,12 @@ impl<T: Sync + Send> Node<T> {
             let futures = root
                 .children_mut()
                 .iter_mut()
-                .map(|child| immersion(child, &base, f));
+                .map(|child| immersion_mut(child, &base, f));
 
             join_all(futures).await;
         }
 
-        immersion(self, &base, &f).await
+        immersion_mut(self, &base, &f).await
     }
 }
 
@@ -279,16 +307,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_reduce_mut() {
-        let mut root = Node::new(10_i32);
-        let mut child1 = Node::new(20);
-        let mut child2 = Node::new(30);
-        let grandchild1 = Node::new(40);
-        let grandchild2 = Node::new(50);
-
-        child1.add_child(grandchild1);
-        child2.add_child(grandchild2);
-        root.add_child(child1);
-        root.add_child(child2);
+        let mut root = node![10_i32, node![20, node![40]], node![30, node!(50)]];
 
         let sum = root
             .reduce_mut(|n, results| {
@@ -302,9 +321,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_node_cascade() {
+        let root = node![10, node![20, node![40]], node![30, node!(50)]];
+
+        let result = Arc::new(Mutex::new(Vec::new()));
+        root.cascade(0, |n, parent_value| {
+            let next = n.value() + parent_value;
+            result.clone().lock().unwrap().push(next);
+            next
+        })
+        .await;
+
+        assert!(result.lock().unwrap().contains(&10));
+        assert!(result.lock().unwrap().contains(&30));
+        assert!(result.lock().unwrap().contains(&40));
+        assert!(result.lock().unwrap().contains(&70));
+        assert!(result.lock().unwrap().contains(&90));
+    }
+
+    #[tokio::test]
+    async fn test_node_cascade_mut() {
         let mut root = node![10, node![20, node![40]], node![30, node!(50)]];
 
-        root.cascade(0, |n, parent_value| {
+        root.cascade_mut(0, |n, parent_value| {
             let next = n.value() + parent_value;
             n.set_value(*parent_value);
             next
