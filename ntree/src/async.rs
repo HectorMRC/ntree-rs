@@ -1,11 +1,11 @@
-//! Asynchronous implementation of [`Node`].
+//! Asynchronous implementation for [`Node`].
 
 use crate::Node;
 use async_recursion::async_recursion;
 use futures::future::join_all;
 
 impl<T: Sync + Send> Node<T> {
-    /// Calls the given closure for each node in the tree rooted by self following then pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self following the pre-order traversal.
     #[async_recursion]
     pub async fn preorder<F>(&self, f: F)
     where
@@ -31,7 +31,7 @@ impl<T: Sync + Send> Node<T> {
         immersion(self, &f).await
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following then pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self following the pre-order traversal.
     #[async_recursion]
     pub async fn preorder_mut<F>(&mut self, f: F)
     where
@@ -225,7 +225,7 @@ impl<T: Sync + Send> Node<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::macros::node;
+    use crate::node;
     use std::sync::{Arc, Mutex};
 
     #[tokio::test]
@@ -236,11 +236,12 @@ mod tests {
         root.preorder(|n| result.clone().lock().unwrap().push(*n.value()))
             .await;
 
-        assert!(result.lock().unwrap().contains(&10));
-        assert!(result.lock().unwrap().contains(&20));
-        assert!(result.lock().unwrap().contains(&30));
-        assert!(result.lock().unwrap().contains(&40));
-        assert!(result.lock().unwrap().contains(&50));
+        let got = result.lock().unwrap();
+        assert_eq!(got[0], 10);
+        assert!(got.contains(&20));
+        assert!(got.contains(&30));
+        assert!(got.contains(&40));
+        assert!(got.contains(&50));
     }
 
     #[tokio::test]
@@ -254,11 +255,12 @@ mod tests {
         })
         .await;
 
-        assert!(result.lock().unwrap().contains(&11));
-        assert!(result.lock().unwrap().contains(&21));
-        assert!(result.lock().unwrap().contains(&31));
-        assert!(result.lock().unwrap().contains(&41));
-        assert!(result.lock().unwrap().contains(&51));
+        let got = result.lock().unwrap();
+        assert_eq!(got[0], 11);
+        assert!(got.contains(&21));
+        assert!(got.contains(&31));
+        assert!(got.contains(&41));
+        assert!(got.contains(&51));
     }
 
     #[tokio::test]
@@ -269,11 +271,12 @@ mod tests {
         root.postorder(|n| result.clone().lock().unwrap().push(*n.value()))
             .await;
 
-        assert!(result.lock().unwrap().contains(&40));
-        assert!(result.lock().unwrap().contains(&20));
-        assert!(result.lock().unwrap().contains(&50));
-        assert!(result.lock().unwrap().contains(&30));
-        assert!(result.lock().unwrap().contains(&10));
+        let got = result.lock().unwrap();
+        assert!(got.contains(&40));
+        assert!(got.contains(&20));
+        assert!(got.contains(&50));
+        assert!(got.contains(&30));
+        assert_eq!(got[got.len() - 1], 10);
     }
 
     #[tokio::test]
@@ -287,36 +290,57 @@ mod tests {
         })
         .await;
 
-        assert!(result.lock().unwrap().contains(&41));
-        assert!(result.lock().unwrap().contains(&21));
-        assert!(result.lock().unwrap().contains(&51));
-        assert!(result.lock().unwrap().contains(&31));
-        assert!(result.lock().unwrap().contains(&11));
+        let got = result.lock().unwrap();
+        assert!(got.contains(&41));
+        assert!(got.contains(&21));
+        assert!(got.contains(&51));
+        assert!(got.contains(&31));
+        assert_eq!(got[got.len() - 1], 11);
     }
 
     #[tokio::test]
     async fn test_node_reduce() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
+        let result = Arc::new(Mutex::new(Vec::new()));
         let sum = root
-            .reduce(|n, results| n.value() + results.iter().sum::<i32>())
+            .reduce(|n, results| {
+                result.clone().lock().unwrap().push(*n.value());
+                n.value() + results.iter().sum::<i32>()
+            })
             .await;
 
         assert_eq!(sum, 150);
+
+        let got = result.lock().unwrap();
+        assert!(got.contains(&40));
+        assert!(got.contains(&20));
+        assert!(got.contains(&50));
+        assert!(got.contains(&30));
+        assert_eq!(got[got.len() - 1], 10);
     }
 
     #[tokio::test]
     async fn test_node_reduce_mut() {
         let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
+        let result = Arc::new(Mutex::new(Vec::new()));
         let sum = root
             .reduce_mut(|n, results| {
                 n.set_value(n.value().saturating_add(1));
+                result.clone().lock().unwrap().push(*n.value());
                 n.value() + results.iter().sum::<i32>()
             })
             .await;
 
         assert_eq!(sum, 155);
+
+        let got = result.lock().unwrap();
+        assert!(got.contains(&41));
+        assert!(got.contains(&21));
+        assert!(got.contains(&51));
+        assert!(got.contains(&31));
+        assert_eq!(got[got.len() - 1], 11);
     }
 
     #[tokio::test]
@@ -331,19 +355,22 @@ mod tests {
         })
         .await;
 
-        assert!(result.lock().unwrap().contains(&10));
-        assert!(result.lock().unwrap().contains(&30));
-        assert!(result.lock().unwrap().contains(&40));
-        assert!(result.lock().unwrap().contains(&70));
-        assert!(result.lock().unwrap().contains(&90));
+        let got = result.lock().unwrap();
+        assert_eq!(got[0], 10);
+        assert!(got.contains(&30));
+        assert!(got.contains(&40));
+        assert!(got.contains(&70));
+        assert!(got.contains(&90));
     }
 
     #[tokio::test]
     async fn test_node_cascade_mut() {
         let mut root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
+        let result = Arc::new(Mutex::new(Vec::new()));
         root.cascade_mut(0, |n, parent_value| {
             let next = n.value() + parent_value;
+            result.clone().lock().unwrap().push(next);
             n.set_value(*parent_value);
             next
         })
@@ -354,5 +381,12 @@ mod tests {
         assert_eq!(root.children[1].value, 10);
         assert_eq!(root.children[0].children[0].value, 30);
         assert_eq!(root.children[1].children[0].value, 40);
+
+        let got = result.lock().unwrap();
+        assert_eq!(got[0], 10);
+        assert!(got.contains(&30));
+        assert!(got.contains(&40));
+        assert!(got.contains(&70));
+        assert!(got.contains(&90));
     }
 }

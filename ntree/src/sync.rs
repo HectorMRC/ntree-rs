@@ -1,4 +1,4 @@
-//! Synchronous implementation of [`Node`].
+//! Synchronous implementation for [`Node`].
 
 use crate::Node;
 
