@@ -144,6 +144,13 @@ mod tests {
     }
 
     #[test]
+    fn test_node_children_mut() {
+        let mut root = node!(10, node!(20), node!(30));
+        root.children_mut().swap(0, 1);
+        assert_eq!(root, node!(10, node!(30), node!(20)));
+    }
+
+    #[test]
     fn test_node_remove_child() {
         let mut root = node!(10, node!(20), node!(30));
         let removed = root.remove_child(0);
