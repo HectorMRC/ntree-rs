@@ -126,8 +126,20 @@ mod tests {
     }
 
     #[test]
+    fn test_node_value_mut() {
+        let mut root = Node::new(42);
+        assert_eq!(root.value(), &42);
+
+        (*root.value_mut()) = 123;
+        assert_eq!(root.value(), &123);
+    }
+
+    #[test]
     fn test_node_add_child() {
-        let root = node!(10, node!(20), node!(30));
+        let mut root = node!(10);
+        root.add_child(node!(20));
+        root.add_child(node!(30));
+
         assert_eq!(root.children_len(), 2);
     }
 
