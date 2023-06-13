@@ -2,12 +2,16 @@
 name = "ntree-macros"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-ntree-rs = { path = "../ntree" }
-quote = "1.0.28"
-syn = "2.0.18"
+license = "MIT"
+description = "Complementari proc macros for ntree-rs"
 
 [lib]
 path = "src/lib.rs"
 proc-macro = true
+
+[dependencies]
+quote = "1.0.28"
+syn = "2.0.18"
+
+[dev-dependencies]
+ntree-rs = { path = "../ntree" }

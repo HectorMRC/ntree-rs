@@ -2,6 +2,9 @@
 name = "ntree-rs"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "A mutable n-tree with async support"
+
 
 [dependencies]
 async-recursion = { version = "1.0.4", optional = true }

@@ -10,22 +10,24 @@ mod sync;
 #[cfg(not(feature = "async"))]
 pub use sync::*;
 
-#[macro_export]
-macro_rules! node {
-    ($value:expr $(,$($children:expr),*)?) => (
-        Node {
-            value: $value,
-            children: vec![ $($($children),*)? ]
-        }
-    )
+mod macros {
+    #[macro_export]
+    macro_rules! node {
+        ($value:expr $(,$($children:expr),*)?) => (
+            Node {
+                value: $value,
+                children: vec![ $($($children),*)? ]
+            }
+        )
+    }
 }
 
 /// Represents the minimum unit in a tree, containing a value of type T and all
 /// those nodes children of the node itself, if any.
 #[derive(Debug)]
 pub struct Node<T> {
-    pub value: T,
-    pub children: Vec<Node<T>>,
+    value: T,
+    children: Vec<Node<T>>,
 }
 
 impl<T> Node<T> {

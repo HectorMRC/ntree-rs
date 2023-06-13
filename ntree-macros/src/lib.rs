@@ -11,6 +11,12 @@ pub fn into_node(input: TokenStream) -> TokenStream {
                 Node::new(self)
             }
         }
+
+        impl #ident {
+            fn to_node(self) -> Node<Item> {
+                self.into()
+            }
+        }
     };
 
     code.into()
