@@ -3,7 +3,7 @@ name = "ntree-macros"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "Complementari proc macros for ntree-rs"
+description = "Complementary proc macros for ntree-rs"
 
 [lib]
 path = "src/lib.rs"
