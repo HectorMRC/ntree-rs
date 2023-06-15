@@ -1,2 +1,2 @@
 [workspace]
-members = ["ntree", "ntree-macros"]
+members = ["ntree", "ntree-macros", "vector-graphic"]
