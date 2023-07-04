@@ -1,9 +1,10 @@
 [package]
 name = "ntree-rs"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
 description = "A mutable n-tree with async support"
+readme = "../README.md"
 
 [dependencies]
 async-recursion = { version = "1.0.4", optional = true }
@@ -13,4 +14,5 @@ futures = { version = "0.3.28", optional = true }
 tokio = { version = "1.24.1", features = ["macros", "rt-multi-thread"] }
 
 [features]
+default = ["async"]
 async = ["async-recursion", "futures"]

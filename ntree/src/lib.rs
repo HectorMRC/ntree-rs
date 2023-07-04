@@ -1,26 +1,7 @@
-//! Traversable node definition
+//! Definition of a node with an arbitrary number of children.
 
-#[cfg(feature = "async")]
-mod r#async;
-#[cfg(feature = "async")]
-pub use r#async::*;
-
-#[cfg(not(feature = "async"))]
-mod sync;
-#[cfg(not(feature = "async"))]
-pub use sync::*;
-
-mod macros {
-    #[macro_export]
-    macro_rules! node {
-        ($value:expr $(,$($children:expr),*)?) => (
-            Node {
-                value: $value,
-                children: vec![ $($($children),*)? ]
-            }
-        )
-    }
-}
+mod traversal;
+pub use traversal::*;
 
 /// Represents the minimum unit in a tree, containing a value of type T and all
 /// those nodes children of the node itself, if any.
@@ -113,6 +94,18 @@ impl<T: Clone> Clone for Node<T> {
 impl<T: PartialEq> PartialEq for Node<T> {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value && self.children == other.children
+    }
+}
+
+mod macros {
+    #[macro_export]
+    macro_rules! node {
+        ($value:expr $(,$($children:expr),*)?) => (
+            Node {
+                value: $value,
+                children: vec![ $($($children),*)? ]
+            }
+        )
     }
 }
 
