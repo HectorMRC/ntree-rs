@@ -3,6 +3,18 @@
 mod traversal;
 pub use traversal::*;
 
+#[macro_export]
+macro_rules! node {
+    ($value:expr) => (Node::new($value));
+    ($value:expr, $($children:expr),*) => {
+        {
+            let mut tmp_node = Node::new($value);
+            $(tmp_node.add_child($children);)*
+            tmp_node
+        }
+    };
+}
+
 /// Represents the minimum unit in a tree, containing a value of type T and all
 /// those nodes children of the node itself, if any.
 #[derive(Debug)]
@@ -94,18 +106,6 @@ impl<T: Clone> Clone for Node<T> {
 impl<T: PartialEq> PartialEq for Node<T> {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value && self.children == other.children
-    }
-}
-
-mod macros {
-    #[macro_export]
-    macro_rules! node {
-        ($value:expr $(,$($children:expr),*)?) => (
-            Node {
-                value: $value,
-                children: vec![ $($($children),*)? ]
-            }
-        )
     }
 }
 

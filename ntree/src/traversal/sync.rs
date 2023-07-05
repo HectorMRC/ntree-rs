@@ -6,7 +6,7 @@ use crate::{
 };
 use std::marker::PhantomData;
 
-/// Synchronous marker for the [`Traverser`] and [`TraverserMut`].
+/// Synchronous marker for the [`Traverse`] and [`TraverseMut`].
 pub struct Synchronous;
 
 impl<'a, T> Traverse<'a, T, Synchronous> {

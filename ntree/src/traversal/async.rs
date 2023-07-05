@@ -8,7 +8,7 @@ use async_recursion::async_recursion;
 use futures::future::join_all;
 use std::marker::PhantomData;
 
-/// Asynchronous marker for the [`Traverser`] and [`TraverserMut`].
+/// Asynchronous marker for the [`Traverse`] and [`TraverseMut`].
 pub struct Asynchronous;
 
 impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
