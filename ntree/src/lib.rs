@@ -9,7 +9,7 @@ macro_rules! node {
     ($value:expr, $($children:expr),*) => {
         {
             let mut tmp_node = Node::new($value);
-            $(tmp_node.add_child($children);)*
+            $(tmp_node.children_mut().push($children);)*
             tmp_node
         }
     };
@@ -31,14 +31,14 @@ impl<T> Node<T> {
         }
     }
 
-    /// Returns a immutable reference to  node's value.
-    pub fn value(&self) -> &T {
-        &self.value
-    }
-
     /// Sets the given value as the Node's one.
     pub fn set_value(&mut self, value: T) {
         self.value = value;
+    }
+
+    /// Returns a immutable reference to  node's value.
+    pub fn value(&self) -> &T {
+        &self.value
     }
 
     /// Returns a mutable reference to node's value.
@@ -47,29 +47,13 @@ impl<T> Node<T> {
     }
 
     /// Returns an immutable slice of all node's children.
-    pub fn children(&self) -> &[Node<T>] {
+    pub fn children(&self) -> &Vec<Node<T>> {
         &self.children
     }
 
     /// Returns a mutable slice of all node's children.
-    pub fn children_mut(&mut self) -> &mut [Node<T>] {
+    pub fn children_mut(&mut self) -> &mut Vec<Node<T>> {
         self.children.as_mut()
-    }
-
-    /// Adds a new child to the node and returns its total number of children.
-    pub fn add_child(&mut self, child: Node<T>) -> usize {
-        self.children.push(child);
-        self.children.len()
-    }
-
-    /// Removes the children located at the given index and returns it, if any.
-    pub fn remove_child(&mut self, index: usize) -> Option<Node<T>> {
-        (index < self.children.len()).then_some(self.children.remove(index))
-    }
-
-    /// Returns the total of direct descendants (children) the node has.
-    pub fn children_len(&self) -> usize {
-        self.children.len()
     }
 
     /// Returns the number of descendants the node has. This method return 0 if, and only if,
@@ -117,7 +101,7 @@ mod tests {
     fn test_node_new() {
         let root = Node::new(42);
         assert_eq!(root.value(), &42);
-        assert_eq!(root.children_len(), 0);
+        assert_eq!(root.children().len(), 0);
     }
 
     #[test]
@@ -132,10 +116,10 @@ mod tests {
     #[test]
     fn test_node_add_child() {
         let mut root = node!(10);
-        root.add_child(node!(20));
-        root.add_child(node!(30));
+        root.children_mut().push(node!(20));
+        root.children_mut().push(node!(30));
 
-        assert_eq!(root.children_len(), 2);
+        assert_eq!(root.children().len(), 2);
     }
 
     #[test]
@@ -148,9 +132,9 @@ mod tests {
     #[test]
     fn test_node_remove_child() {
         let mut root = node!(10, node!(20), node!(30));
-        let removed = root.remove_child(0);
-        assert_eq!(removed.unwrap().value(), &20);
-        assert_eq!(root.children_len(), 1);
+        let removed = root.children_mut().remove(0);
+        assert_eq!(removed.value(), &20);
+        assert_eq!(root.children().len(), 1);
     }
 
     #[test]
@@ -172,7 +156,7 @@ mod tests {
 
         assert_eq!(copy, original);
 
-        copy.remove_child(0);
+        copy.children_mut().remove(0);
         assert_ne!(copy, original);
     }
 }
