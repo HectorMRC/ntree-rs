@@ -79,7 +79,7 @@ jobs:
           command: generate-lockfile
 
       - name: Cargo llvm-cov
-        run: cargo llvm-cov --locked --lcov --output-path lcov.info
+        run: cargo llvm-cov --locked --lcov --output-path lcov.info -- --nocapture
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
