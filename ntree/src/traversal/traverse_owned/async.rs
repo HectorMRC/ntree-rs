@@ -2,14 +2,27 @@
 
 use crate::{
     traversal::{Traverse, TraverseMut},
-    Node,
+    Node, Synchronous,
 };
 use async_recursion::async_recursion;
 use futures::future::join_all;
 use std::marker::PhantomData;
 
-/// Asynchronous marker for the [`Traverse`] and [`TraverseMut`].
-pub struct Asynchronous;
+impl<'a, T> From<Traverse<'a, T, Synchronous>> for Traverse<'a, T, Asynchronous>
+where
+    T: Sync + Send,
+{
+    fn from(value: Traverse<'a, T, Synchronous>) -> Self {
+        Traverse::new_async(value.node)
+    }
+}
+
+impl<'a, T> Traverse<'a, T, Asynchronous> {
+    /// Converts the asynchronous traverse into a synchronous one.
+    pub fn into_sync(self) -> Traverse<'a, T, Synchronous> {
+        self.into()
+    }
+}
 
 impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
     pub fn new_async(node: &'a Node<T>) -> Self {

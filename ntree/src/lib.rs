@@ -19,8 +19,8 @@ macro_rules! node {
 /// those nodes children of the node itself, if any.
 #[derive(Debug)]
 pub struct Node<T> {
-    value: T,
-    children: Vec<Node<T>>,
+    pub(crate) value: T,
+    pub(crate) children: Vec<Node<T>>,
 }
 
 impl<T> Node<T> {
@@ -29,6 +29,11 @@ impl<T> Node<T> {
             value,
             children: vec![],
         }
+    }
+
+    pub fn with_children(mut self, children: Vec<Node<T>>) -> Self {
+        self.children = children;
+        self
     }
 
     /// Sets the given value as the Node's one.
