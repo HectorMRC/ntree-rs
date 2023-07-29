@@ -1,7 +1,7 @@
 //! Synchronous traversal implementation.
 
-use crate::{traversal::Traverse, Asynchronous, Node, Synchronous};
-use std::marker::PhantomData;
+use crate::{traversal::Traverse, Asynchronous, Node, Order, Synchronous, TraverseOwned};
+use std::{marker::PhantomData, rc::Rc, sync::Mutex};
 
 impl<'a, T> From<Traverse<'a, T, Asynchronous>> for Traverse<'a, T, Synchronous> {
     fn from(value: Traverse<'a, T, Asynchronous>) -> Self {
@@ -27,46 +27,62 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following the pre-order traversal.
-    pub fn preorder<F>(&self, mut f: F) -> &Self
+    /// Calls the given closure for each node in the tree rooted by self following the specified
+    /// traversal order.
+    pub fn for_each<O, F>(self, f: F) -> Self
     where
         F: FnMut(&Node<T>),
+        O: Order,
     {
-        pub fn immersion<T, F>(root: &Node<T>, f: &mut F)
+        pub fn immersion<O, F, T>(root: &Node<T>, f: Rc<Mutex<F>>)
         where
             F: FnMut(&Node<T>),
+            O: Order,
         {
-            f(root);
-            root.children().iter().for_each(|child| immersion(child, f));
+            O::traverse(
+                || {
+                    if let Ok(mut f) = f.lock() {
+                        (*f)(root)
+                    }
+                },
+                || {
+                    root.children()
+                        .iter()
+                        .for_each(|child| immersion::<O, F, T>(child, f.clone()));
+                },
+            )
         }
 
-        immersion(self.node, &mut f);
+        let closure = Rc::new(Mutex::new(f));
+        immersion::<O, F, T>(self.node, closure);
 
         self
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
-    pub fn postorder<F>(&self, mut f: F) -> &Self
+    /// Builds a brand new tree with the same structure where each node is the result of calling the closure f
+    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
-        F: FnMut(&Node<T>),
+        F: FnMut(&Node<T>) -> R,
     {
-        pub fn immersion<T, F>(root: &Node<T>, f: &mut F)
+        pub fn immersion<T, R, F>(root: &Node<T>, f: &mut F) -> Node<R>
         where
-            F: FnMut(&Node<T>),
+            F: FnMut(&Node<T>) -> R,
         {
-            root.children().iter().for_each(|child| immersion(child, f));
-            f(root);
+            Node::new(f(root)).with_children(
+                root.children()
+                    .iter()
+                    .map(|child| immersion::<T, R, F>(child, f))
+                    .collect(),
+            )
         }
 
-        immersion(self.node, &mut f);
-
-        self
+        TraverseOwned::new(immersion::<T, R, F>(self.node, &mut f))
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
     /// containing the returned value of f for each child in that node given as the first parameter.
-    pub fn reduce<F, R>(&self, mut f: F) -> R
+    pub fn reduce<F, R>(self, mut f: F) -> R
     where
         F: FnMut(&Node<T>, Vec<R>) -> R,
         R: Sized,
@@ -90,7 +106,7 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
     /// Calls the given closure recursivelly along the tree rooted by self.
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
-    pub fn cascade<F, R>(&self, base: R, mut f: F)
+    pub fn cascade<F, R>(self, base: R, mut f: F) -> Self
     where
         F: FnMut(&Node<T>, &R) -> R,
         R: Sized,
@@ -106,36 +122,39 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         }
 
         immersion(self.node, &base, &mut f);
+        self
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::node;
+    use crate::{node, Postorder, Preorder};
 
     #[test]
-    fn test_node_preorder() {
+    fn test_foreach_preorder() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();
-        root.traverse().preorder(|n| result.push(*n.value()));
+        root.traverse()
+            .for_each::<Preorder, _>(|n| result.push(*n.value()));
 
         assert_eq!(result, vec![10, 20, 40, 30, 50]);
     }
 
     #[test]
-    fn test_node_postorder() {
+    fn test_foreach_postorder() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();
-        root.traverse().postorder(|n| result.push(*n.value()));
+        root.traverse()
+            .for_each::<Postorder, _>(|n| result.push(*n.value()));
 
         assert_eq!(result, vec![40, 20, 50, 30, 10]);
     }
 
     #[test]
-    fn test_node_reduce() {
+    fn test_reduce() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let sum = root
@@ -146,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn test_node_cascade() {
+    fn test_cascade() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();

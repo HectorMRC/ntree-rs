@@ -32,17 +32,17 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
     where
         F: FnMut(&mut Node<T>),
     {
-        pub fn immersion_mut<T, F>(root: &mut Node<T>, f: &mut F)
+        pub fn immersion<T, F>(root: &mut Node<T>, f: &mut F)
         where
             F: FnMut(&mut Node<T>),
         {
             f(root);
             root.children_mut()
                 .iter_mut()
-                .for_each(|child| immersion_mut(child, f));
+                .for_each(|child| immersion(child, f));
         }
 
-        immersion_mut(self.node, &mut f);
+        immersion(self.node, &mut f);
 
         self
     }
@@ -52,17 +52,17 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
     where
         F: FnMut(&mut Node<T>),
     {
-        pub fn immersion_mut<T, F>(root: &mut Node<T>, f: &mut F)
+        pub fn immersion<T, F>(root: &mut Node<T>, f: &mut F)
         where
             F: FnMut(&mut Node<T>),
         {
             root.children_mut()
                 .iter_mut()
-                .for_each(|child| immersion_mut(child, f));
+                .for_each(|child| immersion(child, f));
             f(root);
         }
 
-        immersion_mut(self.node, &mut f);
+        immersion(self.node, &mut f);
 
         self
     }
@@ -75,20 +75,20 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
         F: FnMut(&mut Node<T>, Vec<R>) -> R,
         R: Sized,
     {
-        pub fn immersion_mut<T, F, R>(root: &mut Node<T>, f: &mut F) -> R
+        pub fn immersion<T, F, R>(root: &mut Node<T>, f: &mut F) -> R
         where
             F: FnMut(&mut Node<T>, Vec<R>) -> R,
         {
             let results = root
                 .children_mut()
                 .iter_mut()
-                .map(|child| immersion_mut(child, f))
+                .map(|child| immersion(child, f))
                 .collect();
 
             f(root, results)
         }
 
-        immersion_mut(self.node, &mut f)
+        immersion(self.node, &mut f)
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -99,17 +99,17 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
         F: FnMut(&mut Node<T>, &R) -> R,
         R: Sized,
     {
-        fn immersion_mut<T, F, R>(root: &mut Node<T>, base: &R, f: &mut F)
+        fn immersion<T, F, R>(root: &mut Node<T>, base: &R, f: &mut F)
         where
             F: FnMut(&mut Node<T>, &R) -> R,
         {
             let base = f(root, base);
             root.children_mut()
                 .iter_mut()
-                .for_each(|child| immersion_mut(child, &base, f));
+                .for_each(|child| immersion(child, &base, f));
         }
 
-        immersion_mut(self.node, &base, &mut f);
+        immersion(self.node, &base, &mut f);
     }
 }
 

@@ -156,7 +156,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         F: Fn(&mut Node<T>) + Sync + Send,
     {
         #[async_recursion]
-        pub async fn immersion_mut<T, F>(root: &mut Node<T>, f: &F)
+        pub async fn immersion<T, F>(root: &mut Node<T>, f: &F)
         where
             T: Sync + Send,
             F: Fn(&mut Node<T>) + Sync + Send,
@@ -166,13 +166,13 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             let futures: Vec<_> = root
                 .children_mut()
                 .iter_mut()
-                .map(|child| immersion_mut(child, f))
+                .map(|child| immersion(child, f))
                 .collect();
 
             join_all(futures).await;
         }
 
-        immersion_mut(self.node, &f).await
+        immersion(self.node, &f).await
     }
 
     /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
@@ -182,7 +182,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         F: Fn(&mut Node<T>) + Sync + Send,
     {
         #[async_recursion]
-        pub async fn immersion_mut<T, F>(root: &mut Node<T>, f: &F)
+        pub async fn immersion<T, F>(root: &mut Node<T>, f: &F)
         where
             T: Sync + Send,
             F: Fn(&mut Node<T>) + Sync + Send,
@@ -190,14 +190,14 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             let futures: Vec<_> = root
                 .children_mut()
                 .iter_mut()
-                .map(|child| immersion_mut(child, f))
+                .map(|child| immersion(child, f))
                 .collect();
 
             join_all(futures).await;
             f(root);
         }
 
-        immersion_mut(self.node, &f).await
+        immersion(self.node, &f).await
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -210,7 +210,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         R: Sized + Sync + Send,
     {
         #[async_recursion]
-        async fn immersion_mut<T, F, R>(root: &mut Node<T>, f: &F) -> R
+        async fn immersion<T, F, R>(root: &mut Node<T>, f: &F) -> R
         where
             T: Sync + Send,
             F: Fn(&mut Node<T>, Vec<R>) -> R + Sync + Send,
@@ -219,14 +219,14 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             let futures: Vec<_> = root
                 .children_mut()
                 .iter_mut()
-                .map(|child| immersion_mut(child, f))
+                .map(|child| immersion(child, f))
                 .collect();
 
             let results = join_all(futures).await;
             f(root, results)
         }
 
-        immersion_mut(self.node, &f).await
+        immersion(self.node, &f).await
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self.
@@ -239,7 +239,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         R: Sized + Sync + Send,
     {
         #[async_recursion]
-        async fn immersion_mut<T, F, R>(root: &mut Node<T>, base: &R, f: &F)
+        async fn immersion<T, F, R>(root: &mut Node<T>, base: &R, f: &F)
         where
             T: Sync + Send,
             F: Fn(&mut Node<T>, &R) -> R + Sync + Send,
@@ -249,12 +249,12 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             let futures = root
                 .children_mut()
                 .iter_mut()
-                .map(|child| immersion_mut(child, &base, f));
+                .map(|child| immersion(child, &base, f));
 
             join_all(futures).await;
         }
 
-        immersion_mut(self.node, &base, &f).await
+        immersion(self.node, &base, &f).await
     }
 }
 
