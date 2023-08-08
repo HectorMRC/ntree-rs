@@ -1,7 +1,10 @@
 //! Synchronous traversal implementation.
 
-use crate::{traversal::Traverse, Asynchronous, Node, Order, Synchronous, TraverseOwned};
-use std::{marker::PhantomData, rc::Rc, sync::Mutex};
+use crate::{
+    traversal::{macros, Traverse},
+    Asynchronous, Node, Order, Synchronous, TraverseOwned,
+};
+use std::marker::PhantomData;
 
 impl<'a, T> From<Traverse<'a, T, Asynchronous>> for Traverse<'a, T, Synchronous> {
     fn from(value: Traverse<'a, T, Asynchronous>) -> Self {
@@ -27,59 +30,30 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following the specified
-    /// traversal order.
-    pub fn for_each<O, F>(self, f: F) -> Self
+    /// Calls the given closure recursivelly along the tree rooted by self.
+    pub fn for_each<O, F>(self, mut f: F) -> Self
     where
         F: FnMut(&Node<T>),
         O: Order,
     {
-        pub fn immersion<O, F, T>(root: &Node<T>, f: Rc<Mutex<F>>)
-        where
-            F: FnMut(&Node<T>),
-            O: Order,
-        {
-            O::traverse(
-                || {
-                    if let Ok(mut f) = f.lock() {
-                        (*f)(root)
-                    }
-                },
-                || {
-                    root.children()
-                        .iter()
-                        .for_each(|child| immersion::<O, F, T>(child, f.clone()));
-                },
-            )
-        }
-
-        let closure = Rc::new(Mutex::new(f));
-        immersion::<O, F, T>(self.node, closure);
-
+        macros::for_each_immersion!(&Node<T>, get);
+        for_each_immersion::<O, F, T>(self.node, &mut f);
         self
     }
 
-    /// Builds a brand new tree with the same structure where each node is the result of calling the closure f
-    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
+    /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self.
+    pub fn map<O, F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
         F: FnMut(&Node<T>) -> R,
+        O: Order,
     {
-        pub fn immersion<T, R, F>(root: &Node<T>, f: &mut F) -> Node<R>
-        where
-            F: FnMut(&Node<T>) -> R,
-        {
-            Node::new(f(root)).with_children(
-                root.children()
-                    .iter()
-                    .map(|child| immersion::<T, R, F>(child, f))
-                    .collect(),
-            )
-        }
-
-        TraverseOwned::new(immersion::<T, R, F>(self.node, &mut f))
+        macros::map_immersion!(&Node<T>, get);
+        TraverseOwned::new(map_immersion::<O, T, F, R>(self.node, &mut f))
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
+    /// value.
+    ///
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
     /// containing the returned value of f for each child in that node given as the first parameter.
     pub fn reduce<F, R>(self, mut f: F) -> R
@@ -87,23 +61,13 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         F: FnMut(&Node<T>, Vec<R>) -> R,
         R: Sized,
     {
-        fn immersion<T, F, R>(root: &Node<T>, f: &mut F) -> R
-        where
-            F: FnMut(&Node<T>, Vec<R>) -> R,
-        {
-            let results = root
-                .children()
-                .iter()
-                .map(|child| immersion(child, f))
-                .collect();
-
-            f(root, results)
-        }
-
-        immersion(self.node, &mut f)
+        macros::reduce_immersion!(&Node<T>, children, iter);
+        reduce_immersion(self.node, &mut f)
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
+    /// data to its children.
+    ///
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
     pub fn cascade<F, R>(self, base: R, mut f: F) -> Self
@@ -111,17 +75,8 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         F: FnMut(&Node<T>, &R) -> R,
         R: Sized,
     {
-        pub fn immersion<T, F, R>(root: &Node<T>, base: &R, f: &mut F)
-        where
-            F: FnMut(&Node<T>, &R) -> R,
-        {
-            let base = f(root, base);
-            root.children()
-                .iter()
-                .for_each(|child| immersion(child, &base, f));
-        }
-
-        immersion(self.node, &base, &mut f);
+        macros::cascade_immersion!(&Node<T>, children, iter);
+        cascade_immersion(self.node, &base, &mut f);
         self
     }
 }
