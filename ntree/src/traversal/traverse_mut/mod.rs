@@ -8,7 +8,7 @@ pub use r#async::*;
 mod sync;
 pub use sync::*;
 
-use crate::Node;
+use crate::{Asynchronous, Node, Synchronous};
 use std::marker::PhantomData;
 
 /// Implements the traverse algorithms for a mutable reference of a [`Node`].
@@ -33,5 +33,20 @@ impl<'a, T, S> TraverseMut<'a, T, S> {
 
     pub fn node_mut(&'a mut self) -> &'a mut Node<T> {
         self.node
+    }
+}
+
+impl<'a, T> From<TraverseMut<'a, T, Asynchronous>> for TraverseMut<'a, T, Synchronous> {
+    fn from(value: TraverseMut<'a, T, Asynchronous>) -> Self {
+        TraverseMut::new(value.node)
+    }
+}
+
+impl<'a, T> From<TraverseMut<'a, T, Synchronous>> for TraverseMut<'a, T, Asynchronous>
+where
+    T: Sync + Send,
+{
+    fn from(value: TraverseMut<'a, T, Synchronous>) -> Self {
+        TraverseMut::new_async(value.node)
     }
 }

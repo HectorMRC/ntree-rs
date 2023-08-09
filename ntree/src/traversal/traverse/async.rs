@@ -1,9 +1,6 @@
 //! Asynchronous traversal implementation.
 
-use crate::{
-    traversal::{macros::r#async as macros, Order, Traverse},
-    Asynchronous, Node, Synchronous,
-};
+use crate::{traversal::Traverse, Asynchronous, Node, Synchronous, TraverseOwned};
 use async_recursion::async_recursion;
 use futures::future::join_all;
 use std::marker::PhantomData;
@@ -32,19 +29,51 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following the pre-order traversal.
+    /// Calls the given closure recursivelly along the tree rooted by self following the pre-order traversal.
     #[async_recursion]
     pub async fn for_each<O, F>(&self, f: F) -> &Self
     where
         F: Fn(&Node<T>) + Sync + Send,
-        O: Order,
     {
-        macros::for_each_immersion!(&'async_recursion Node<T>, get);
-        for_each_immersion::<O, F, T>(self.node, &f).await;
+        #[async_recursion]
+        pub async fn immersion<T, F>(root: &Node<T>, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&Node<T>) + Sync + Send,
+        {
+            join_all(root.children.iter().map(|child| immersion(child, f))).await;
+            f(root);
+        }
+
+        immersion::<T, F>(self.node, &f).await;
         self
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self following the pre-order traversal.
+    #[async_recursion]
+    pub async fn map<F, R>(&self, f: F) -> TraverseOwned<R, Asynchronous>
+    where
+        F: Fn(&Node<T>) -> R + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        #[async_recursion]
+        pub async fn immersion<T, F, R>(root: &Node<T>, f: &F) -> Node<R>
+        where
+            T: Sync + Send,
+            F: Fn(&Node<T>) -> R + Sync + Send,
+            R: Sized + Sync + Send,
+        {
+            Node::new(f(root)).with_children(
+                join_all(root.children.iter().map(|child| immersion(child, f))).await,
+            )
+        }
+
+        TraverseOwned::new_async(immersion(self.node, &f).await)
+    }
+
+    /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
+    /// value.
+    ///
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
     /// containing the returned value of f for each child in that node given as the first parameter.
     #[async_recursion]
@@ -60,20 +89,16 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
             F: Fn(&Node<T>, Vec<R>) -> R + Sync + Send,
             R: Sized + Sync + Send,
         {
-            let futures: Vec<_> = root
-                .children()
-                .iter()
-                .map(|child| immersion(child, f))
-                .collect();
-
-            let results = join_all(futures).await;
+            let results = join_all(root.children.iter().map(|child| immersion(child, f))).await;
             f(root, results)
         }
 
         immersion(self.node, &f).await
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
+    /// data to its children.
+    ///
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
     #[async_recursion]
@@ -90,12 +115,7 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
             R: Sized + Sync + Send,
         {
             let base = f(root, base);
-            let futures = root
-                .children()
-                .iter()
-                .map(|child| immersion(child, &base, f));
-
-            join_all(futures).await;
+            join_all(root.children.iter().map(|child| immersion(child, &base, f))).await;
         }
 
         immersion(self.node, &base, &f).await

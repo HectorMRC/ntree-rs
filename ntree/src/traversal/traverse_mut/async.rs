@@ -1,18 +1,9 @@
 //! Asynchronous traversal implementation.
 
-use crate::{traversal::TraverseMut, Asynchronous, Node, Synchronous};
+use crate::{traversal::TraverseMut, Asynchronous, Node, Synchronous, TraverseOwned};
 use async_recursion::async_recursion;
 use futures::future::join_all;
 use std::marker::PhantomData;
-
-impl<'a, T> From<TraverseMut<'a, T, Synchronous>> for TraverseMut<'a, T, Asynchronous>
-where
-    T: Sync + Send,
-{
-    fn from(value: TraverseMut<'a, T, Synchronous>) -> Self {
-        TraverseMut::new_async(value.node)
-    }
-}
 
 impl<'a, T> TraverseMut<'a, T, Asynchronous> {
     /// Converts the asynchronous traverse into a synchronous one.
@@ -29,9 +20,9 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following the pre-order traversal.
+    /// Calls the given closure recursivelly along the tree rooted by self following the pre-order traversal.
     #[async_recursion]
-    pub async fn preorder<F>(&mut self, f: F) -> &mut Self
+    pub async fn for_each<F>(&mut self, f: F) -> &mut Self
     where
         F: Fn(&mut Node<T>) + Sync + Send,
     {
@@ -41,15 +32,8 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             T: Sync + Send,
             F: Fn(&mut Node<T>) + Sync + Send,
         {
+            join_all(root.children.iter_mut().map(|child| immersion(child, f))).await;
             f(root);
-
-            let futures: Vec<_> = root
-                .children_mut()
-                .iter_mut()
-                .map(|child| immersion(child, f))
-                .collect();
-
-            join_all(futures).await;
         }
 
         immersion(self.node, &f).await;
@@ -57,34 +41,31 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         self
     }
 
-    /// Calls the given closure for each node in the tree rooted by self following the post-order traversal.
+    /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self following the pre-order traversal.
     #[async_recursion]
-    pub async fn postorder<F>(&mut self, f: F) -> &mut Self
+    pub async fn map<F, R>(&mut self, f: F) -> TraverseOwned<R, Asynchronous>
     where
-        F: Fn(&mut Node<T>) + Sync + Send,
+        F: Fn(&mut Node<T>) -> R + Sync + Send,
+        R: Sized + Sync + Send,
     {
         #[async_recursion]
-        pub async fn immersion<T, F>(root: &mut Node<T>, f: &F)
+        pub async fn immersion<T, F, R>(root: &mut Node<T>, f: &F) -> Node<R>
         where
             T: Sync + Send,
-            F: Fn(&mut Node<T>) + Sync + Send,
+            F: Fn(&mut Node<T>) -> R + Sync + Send,
+            R: Sized + Sync + Send,
         {
-            let futures: Vec<_> = root
-                .children_mut()
-                .iter_mut()
-                .map(|child| immersion(child, f))
-                .collect();
-
-            join_all(futures).await;
-            f(root);
+            Node::new(f(root)).with_children(
+                join_all(root.children.iter_mut().map(|child| immersion(child, f))).await,
+            )
         }
 
-        immersion(self.node, &f).await;
-
-        self
+        TraverseOwned::new_async(immersion(self.node, &f).await)
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
+    /// value.
+    ///
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
     /// containing the returned value of f for each child in that node given as the first parameter.
     #[async_recursion]
@@ -100,20 +81,16 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             F: Fn(&mut Node<T>, Vec<R>) -> R + Sync + Send,
             R: Sized + Sync + Send,
         {
-            let futures: Vec<_> = root
-                .children_mut()
-                .iter_mut()
-                .map(|child| immersion(child, f))
-                .collect();
-
-            let results = join_all(futures).await;
+            let results = join_all(root.children.iter_mut().map(|child| immersion(child, f))).await;
             f(root, results)
         }
 
         immersion(self.node, &f).await
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
+    /// data to its children.
+    ///
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
     #[async_recursion]
@@ -130,12 +107,12 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
             R: Sized + Sync + Send,
         {
             let base = f(root, base);
-            let futures = root
-                .children_mut()
-                .iter_mut()
-                .map(|child| immersion(child, &base, f));
-
-            join_all(futures).await;
+            join_all(
+                root.children
+                    .iter_mut()
+                    .map(|child| immersion(child, &base, f)),
+            )
+            .await;
         }
 
         immersion(self.node, &base, &f).await
@@ -155,7 +132,7 @@ mod tests {
         let result = Arc::new(Mutex::new(Vec::new()));
         root.traverse_mut()
             .into_async()
-            .preorder(|n| {
+            .for_each(|n| {
                 n.set_value(n.value().saturating_add(1));
                 result.clone().lock().unwrap().push(*n.value())
             })
@@ -176,7 +153,7 @@ mod tests {
         let result = Arc::new(Mutex::new(Vec::new()));
         root.traverse_mut()
             .into_async()
-            .postorder(|n| {
+            .map(|n| {
                 n.set_value(n.value().saturating_add(1));
                 result.clone().lock().unwrap().push(*n.value());
             })

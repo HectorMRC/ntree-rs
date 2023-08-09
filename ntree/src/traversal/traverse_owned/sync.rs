@@ -1,26 +1,20 @@
 //! Synchronous implementation of both, the [`Traverser`] and [`TraverserMut`].
 
 use crate::{
-    traversal::{macros::sync as macros, TraverseOwned},
-    Node, Order, Synchronous,
+    traversal::{macros, TraverseOwned},
+    Asynchronous, Node, Order, Synchronous,
 };
 use std::marker::PhantomData;
 
-// impl<'a, T> From<TraverseOwned<'a, T, Asynchronous>> for TraverseOwned<'a, T, Synchronous> {
-//     fn from(value: TraverseOwned<'a, T, Asynchronous>) -> Self {
-//         TraverseOwned::new(value.node)
-//     }
-// }
-
-// impl<'a, T> TraverseOwned<'a, T, Synchronous>
-// where
-//     T: Sync + Send,
-// {
-//     /// Converts the synchronous traverse into an asynchronous one.
-//     pub fn into_async(self) -> TraverseOwned<'a, T, Asynchronous> {
-//         TraverseOwned::<'a, T, Asynchronous>::from(self)
-//     }
-// }
+impl<T> TraverseOwned<T, Synchronous>
+where
+    T: Sync + Send,
+{
+    /// Converts the synchronous traverse into an asynchronous one.
+    pub fn into_async(self) -> TraverseOwned<T, Asynchronous> {
+        TraverseOwned::<T, Asynchronous>::from(self)
+    }
+}
 
 impl<T> TraverseOwned<T, Synchronous> {
     pub fn new(node: Node<T>) -> Self {
@@ -37,7 +31,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         O: Order,
     {
         macros::for_each_immersion!(&mut Node<T>, get_mut);
-        for_each_immersion::<O, F, T>(&mut self.node, &mut f);
+        for_each_immersion::<O, T, F>(&mut self.node, &mut f);
         self
     }
 
@@ -61,12 +55,12 @@ impl<T> TraverseOwned<T, Synchronous> {
         F: FnMut(&mut Node<T>, Vec<R>) -> R,
         R: Sized,
     {
-        macros::reduce_immersion!(&mut Node<T>, children_mut, iter_mut);
+        macros::reduce_immersion!(&mut Node<T>, iter_mut);
         reduce_immersion(&mut self.node, &mut f)
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
-    /// data to its children.
+    /// result to its children.
     ///
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
@@ -75,7 +69,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         F: FnMut(&mut Node<T>, &R) -> R,
         R: Sized,
     {
-        macros::cascade_immersion!(&mut Node<T>, children_mut, iter_mut);
+        macros::cascade_immersion!(&mut Node<T>, iter_mut);
         cascade_immersion(&mut self.node, &base, &mut f);
         self
     }

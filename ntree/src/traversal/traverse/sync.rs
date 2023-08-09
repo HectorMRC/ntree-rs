@@ -1,7 +1,7 @@
 //! Synchronous traversal implementation.
 
 use crate::{
-    traversal::{macros::sync as macros, Traverse},
+    traversal::{macros, Traverse},
     Asynchronous, Node, Order, Synchronous, TraverseOwned,
 };
 use std::marker::PhantomData;
@@ -37,7 +37,7 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         O: Order,
     {
         macros::for_each_immersion!(&Node<T>, get);
-        for_each_immersion::<O, F, T>(self.node, &mut f);
+        for_each_immersion::<O, T, F>(self.node, &mut f);
         self
     }
 
@@ -61,12 +61,12 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         F: FnMut(&Node<T>, Vec<R>) -> R,
         R: Sized,
     {
-        macros::reduce_immersion!(&Node<T>, children, iter);
+        macros::reduce_immersion!(&Node<T>, iter);
         reduce_immersion(self.node, &mut f)
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
-    /// data to its children.
+    /// result to its children.
     ///
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
     /// value of calling f on the parent of that node given as the first parameter.
@@ -75,7 +75,7 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         F: FnMut(&Node<T>, &R) -> R,
         R: Sized,
     {
-        macros::cascade_immersion!(&Node<T>, children, iter);
+        macros::cascade_immersion!(&Node<T>, iter);
         cascade_immersion(self.node, &base, &mut f);
         self
     }
