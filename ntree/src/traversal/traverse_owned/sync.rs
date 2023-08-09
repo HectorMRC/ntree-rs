@@ -1,6 +1,9 @@
 //! Synchronous implementation of both, the [`Traverser`] and [`TraverserMut`].
 
-use crate::{traversal::macros, Node, Order, Synchronous, TraverseOwned};
+use crate::{
+    traversal::{macros::sync as macros, TraverseOwned},
+    Node, Order, Synchronous,
+};
 use std::marker::PhantomData;
 
 // impl<'a, T> From<TraverseOwned<'a, T, Asynchronous>> for TraverseOwned<'a, T, Synchronous> {
