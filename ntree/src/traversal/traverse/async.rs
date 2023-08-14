@@ -135,7 +135,7 @@ mod tests {
         let result = Arc::new(Mutex::new(Vec::new()));
         root.traverse()
             .into_async()
-            .for_each::<Preorder, _>(|n| result.clone().lock().unwrap().push(*n.value()))
+            .for_each::<Preorder, _>(|n| result.clone().lock().unwrap().push(n.value))
             .await;
 
         let got = result.lock().unwrap();
@@ -153,7 +153,7 @@ mod tests {
         let result = Arc::new(Mutex::new(Vec::new()));
         root.traverse()
             .into_async()
-            .for_each::<Postorder, _>(|n| result.clone().lock().unwrap().push(*n.value()))
+            .for_each::<Postorder, _>(|n| result.clone().lock().unwrap().push(n.value))
             .await;
 
         let got = result.lock().unwrap();
@@ -173,8 +173,8 @@ mod tests {
             .traverse()
             .into_async()
             .reduce(|n, results| {
-                result.clone().lock().unwrap().push(*n.value());
-                n.value() + results.iter().sum::<i32>()
+                result.clone().lock().unwrap().push(n.value);
+                n.value + results.iter().sum::<i32>()
             })
             .await;
 
@@ -196,7 +196,7 @@ mod tests {
         root.traverse()
             .into_async()
             .cascade(0, |n, parent_value| {
-                let next = n.value() + parent_value;
+                let next = n.value + parent_value;
                 result.clone().lock().unwrap().push(next);
                 next
             })

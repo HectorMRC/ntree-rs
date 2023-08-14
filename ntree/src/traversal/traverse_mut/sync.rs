@@ -36,13 +36,12 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
     }
 
     /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self.
-    pub fn map<O, F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
+    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
         F: FnMut(&mut Node<T>) -> R,
-        O: Order,
     {
-        macros::map_immersion!(&mut Node<T>, get_mut);
-        TraverseOwned::new(map_immersion::<O, T, F, R>(self.node, &mut f))
+        macros::map_immersion!(&mut Node<T>, iter_mut);
+        TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
@@ -86,8 +85,8 @@ mod tests {
 
         let mut result = Vec::new();
         root.traverse_mut().for_each::<Preorder, _>(|n| {
-            n.set_value(n.value().saturating_add(1));
-            result.push(*n.value())
+            n.value = n.value.saturating_add(1);
+            result.push(n.value)
         });
 
         assert_eq!(result, vec![11, 21, 41, 31, 51]);
@@ -99,8 +98,8 @@ mod tests {
 
         let mut result = Vec::new();
         root.traverse_mut().for_each::<Postorder, _>(|n| {
-            n.set_value(n.value().saturating_add(1));
-            result.push(*n.value())
+            n.value = n.value.saturating_add(1);
+            result.push(n.value)
         });
 
         assert_eq!(result, vec![41, 21, 51, 31, 11]);
@@ -111,8 +110,8 @@ mod tests {
         let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let sum = root.traverse_mut().reduce(|n, results| {
-            n.set_value(n.value().saturating_add(1));
-            n.value() + results.iter().sum::<i32>()
+            n.value = n.value.saturating_add(1);
+            n.value + results.iter().sum::<i32>()
         });
 
         assert_eq!(sum, 155);
@@ -123,8 +122,8 @@ mod tests {
         let mut root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         root.traverse_mut().cascade(0, |n, parent_value| {
-            let next = n.value() + parent_value;
-            n.set_value(*parent_value);
+            let next = n.value + parent_value;
+            n.value = *parent_value;
             next
         });
 

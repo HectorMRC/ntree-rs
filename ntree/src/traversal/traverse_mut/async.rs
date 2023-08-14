@@ -133,8 +133,8 @@ mod tests {
         root.traverse_mut()
             .into_async()
             .for_each(|n| {
-                n.set_value(n.value().saturating_add(1));
-                result.clone().lock().unwrap().push(*n.value())
+                n.value = n.value.saturating_add(1);
+                result.clone().lock().unwrap().push(n.value)
             })
             .await;
 
@@ -154,8 +154,8 @@ mod tests {
         root.traverse_mut()
             .into_async()
             .map(|n| {
-                n.set_value(n.value().saturating_add(1));
-                result.clone().lock().unwrap().push(*n.value());
+                n.value = n.value.saturating_add(1);
+                result.clone().lock().unwrap().push(n.value);
             })
             .await;
 
@@ -176,9 +176,9 @@ mod tests {
             .traverse_mut()
             .into_async()
             .reduce(|n, results| {
-                n.set_value(n.value().saturating_add(1));
-                result.clone().lock().unwrap().push(*n.value());
-                n.value() + results.iter().sum::<i32>()
+                n.value = n.value.saturating_add(1);
+                result.clone().lock().unwrap().push(n.value);
+                n.value + results.iter().sum::<i32>()
             })
             .await;
 
@@ -200,9 +200,9 @@ mod tests {
         root.traverse_mut()
             .into_async()
             .cascade(0, |n, parent_value| {
-                let next = n.value() + parent_value;
+                let next = n.value + parent_value;
                 result.clone().lock().unwrap().push(next);
-                n.set_value(*parent_value);
+                n.value = *parent_value;
                 next
             })
             .await;

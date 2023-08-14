@@ -42,13 +42,12 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
     }
 
     /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self.
-    pub fn map<O, F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
+    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
         F: FnMut(&Node<T>) -> R,
-        O: Order,
     {
-        macros::map_immersion!(&Node<T>, get);
-        TraverseOwned::new(map_immersion::<O, T, F, R>(self.node, &mut f))
+        macros::map_immersion!(&Node<T>, iter);
+        TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
     }
 
     /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
@@ -92,7 +91,7 @@ mod tests {
 
         let mut result = Vec::new();
         root.traverse()
-            .for_each::<Preorder, _>(|n| result.push(*n.value()));
+            .for_each::<Preorder, _>(|n| result.push(n.value));
 
         assert_eq!(result, vec![10, 20, 40, 30, 50]);
     }
@@ -103,7 +102,7 @@ mod tests {
 
         let mut result = Vec::new();
         root.traverse()
-            .for_each::<Postorder, _>(|n| result.push(*n.value()));
+            .for_each::<Postorder, _>(|n| result.push(n.value));
 
         assert_eq!(result, vec![40, 20, 50, 30, 10]);
     }
@@ -114,7 +113,7 @@ mod tests {
 
         let sum = root
             .traverse()
-            .reduce(|n, results| n.value() + results.iter().sum::<i32>());
+            .reduce(|n, results| n.value + results.iter().sum::<i32>());
 
         assert_eq!(sum, 150);
     }
@@ -125,8 +124,8 @@ mod tests {
 
         let mut result = Vec::new();
         root.traverse().cascade(0, |n, parent_value| {
-            result.push(n.value() + parent_value);
-            n.value() + parent_value
+            result.push(n.value + parent_value);
+            n.value + parent_value
         });
 
         assert_eq!(result, vec![10, 30, 70, 40, 90]);

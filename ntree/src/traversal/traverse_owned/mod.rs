@@ -35,7 +35,7 @@ impl<T, S> TraverseOwned<T, S> {
         &mut self.node
     }
 
-    pub fn take_node(self) -> Node<T> {
+    pub fn take(self) -> Node<T> {
         self.node
     }
 }

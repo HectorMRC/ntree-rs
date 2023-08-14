@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 
 /// Implements the traverse algorithms for an immutable reference of a [`Node`].
 pub struct Traverse<'a, T, S> {
-    node: &'a Node<T>,
+    pub node: &'a Node<T>,
     strategy: PhantomData<S>,
 }
 

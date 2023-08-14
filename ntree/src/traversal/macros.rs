@@ -21,25 +21,17 @@ macro_rules! for_each_immersion {
 }
 
 macro_rules! map_immersion {
-    ($node:ty, $getter:tt) => {
-        pub fn map_immersion<O, T, F, R>(root: $node, f: &mut F) -> Node<R>
+    ($node:ty, $iter:tt) => {
+        pub fn map_immersion<T, F, R>(root: $node, f: &mut F) -> Node<R>
         where
             F: FnMut($node) -> R,
-            O: Order,
         {
-            let mut new_root = None;
-            let mut children = Vec::with_capacity(root.children.len());
-            for it in 0..=root.children.len() {
-                if O::evaluate_self(root, it) {
-                    new_root = Some(f(root));
-                }
-
-                let Some(index) = O::continue_with(root, it) else {continue;};
-                let Some(child) = root.children.$getter(index) else {break;};
-                children.push(map_immersion::<O, T, F, R>(child, f));
-            }
-
-            Node::new(new_root.unwrap_or_else(|| f(root))).with_children(children)
+            Node::new(f(root)).with_children(
+                root.children
+                    .$iter()
+                    .map(|child| map_immersion::<T, F, R>(child, f))
+                    .collect(),
+            )
         }
     };
 }
