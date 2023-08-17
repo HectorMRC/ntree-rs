@@ -29,7 +29,7 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         }
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self following the pre-order traversal.
+    /// Calls the given closure along the tree rooted by self following the pre-order traversal.
     #[async_recursion]
     pub async fn for_each<O, F>(&self, f: F) -> &Self
     where
@@ -49,7 +49,8 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         self
     }
 
-    /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self following the pre-order traversal.
+    /// Builds a new tree by calling the given closure along the tree rooted by self following the
+    /// pre-order traversal.
     #[async_recursion]
     pub async fn map<F, R>(&self, f: F) -> TraverseOwned<R, Asynchronous>
     where
@@ -71,11 +72,8 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         TraverseOwned::new_async(immersion(self.node, &f).await)
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
+    /// Calls the given closure along the tree rooted by self, reducing it into a single
     /// value.
-    ///
-    /// This method traverses the tree in post-order, and so the second parameter of f is a vector
-    /// containing the returned value of f for each child in that node given as the first parameter.
     #[async_recursion]
     pub async fn reduce<F, R>(&self, f: F) -> R
     where
@@ -96,11 +94,8 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         immersion(self.node, &f).await
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
+    /// Calls the given closure along the tree rooted by self, providing the parent's
     /// data to its children.
-    ///
-    /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
-    /// value of calling f on the parent of that node given as the first parameter.
     #[async_recursion]
     pub async fn cascade<F, R>(&self, base: R, f: F)
     where

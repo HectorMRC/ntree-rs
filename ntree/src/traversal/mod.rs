@@ -31,6 +31,7 @@ pub trait Order {
 /// In the preorder traversal, the value of a [Node] is evaluated before moving forward
 /// forward with its children.
 pub struct Preorder;
+
 impl Order for Preorder {
     fn evaluate_self<T>(_: &Node<T>, it: usize) -> bool {
         it == 0

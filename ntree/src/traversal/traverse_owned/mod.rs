@@ -11,7 +11,7 @@ pub use sync::*;
 use crate::{Asynchronous, Node, Synchronous};
 use std::marker::PhantomData;
 
-/// Implements the traverse algorithms for an owned instance of a [`Node`].
+/// Implements the traverse algorithms for an owned instance of [`Node`].
 pub struct TraverseOwned<T, S> {
     node: Node<T>,
     strategy: PhantomData<S>,

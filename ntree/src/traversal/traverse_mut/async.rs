@@ -20,7 +20,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         }
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self following the pre-order traversal.
+    /// Calls the given closure along the tree rooted by self following the pre-order traversal.
     #[async_recursion]
     pub async fn for_each<F>(&mut self, f: F) -> &mut Self
     where
@@ -41,7 +41,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         self
     }
 
-    /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self following the pre-order traversal.
+    /// Builds a new tree by calling the given closure along the tree rooted by self following the pre-order traversal.
     #[async_recursion]
     pub async fn map<F, R>(&mut self, f: F) -> TraverseOwned<R, Asynchronous>
     where
@@ -63,7 +63,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         TraverseOwned::new_async(immersion(self.node, &f).await)
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
+    /// Calls the given closure along the tree rooted by self, reducing it into a single
     /// value.
     ///
     /// This method traverses the tree in post-order, and so the second parameter of f is a vector
@@ -88,7 +88,7 @@ impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
         immersion(self.node, &f).await
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
+    /// Calls the given closure along the tree rooted by self, providing the parent's
     /// data to its children.
     ///
     /// This method traverses the tree in pre-order, and so the second parameter of f is the returned

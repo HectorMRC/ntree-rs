@@ -2,7 +2,7 @@
 
 use crate::{
     traversal::{macros, TraverseOwned},
-    Asynchronous, Node, Order, Synchronous,
+    Asynchronous, Node, Order, Synchronous, TraverseMut,
 };
 use std::marker::PhantomData;
 
@@ -24,7 +24,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         }
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self.
+    /// Calls the given closure along the tree rooted by self.
     pub fn for_each<O, F>(mut self, mut f: F) -> Self
     where
         F: FnMut(&mut Node<T>),
@@ -35,10 +35,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         self
     }
 
-    /// Builds a new tree by calling the given closure recursivelly along the tree rooted by self.
-    ///
-    /// This method traverses the tree in pre-order since a [Node] cannot exists without a value; the
-    /// second parameter of f are the children of the node corresponding to the given T
+    /// Builds a new tree by calling the given closure along the tree rooted by self.
     pub fn map<O, F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
         F: FnMut(T, &[Node<T>]) -> R,
@@ -59,11 +56,17 @@ impl<T> TraverseOwned<T, Synchronous> {
         TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self, reducing it into a single
+    /// Builds a new tree by calling the given closure along the tree rooted by self.
+    pub fn translate<O, F, R>(mut self, f: F) -> TraverseOwned<R, Synchronous>
+    where
+        F: FnMut(&mut Node<T>, &mut [Node<R>]) -> R,
+        O: Order,
+    {
+        TraverseMut::new(&mut self.node).translate::<O, F, R>(f)
+    }
+
+    /// Calls the given closure along the tree rooted by self, reducing it into a single
     /// value.
-    ///
-    /// This method traverses the tree in post-order, and so the second parameter of f is a vector
-    /// containing the returned value of f for each child in that node on the first parameter.
     pub fn reduce<F, R>(self, mut f: F) -> R
     where
         F: FnMut(T, Vec<R>) -> R,
@@ -85,26 +88,14 @@ impl<T> TraverseOwned<T, Synchronous> {
         reduce_immersion(self.node, &mut f)
     }
 
-    /// Calls the given closure recursivelly along the tree rooted by self, providing the parent's
+    /// Calls the given closure along the tree rooted by self, providing the parent's
     /// result to its children.
-    ///
-    /// This method traverses the tree in pre-order, and so the second parameter of f is the returned
-    /// value of calling f on the parent of that node on the first parameter.
     pub fn cascade<F, R>(mut self, base: R, mut f: F) -> Self
     where
-        F: FnMut(&mut T, &R) -> R,
+        F: FnMut(&mut Node<T>, &R) -> R,
         R: Sized,
     {
-        pub fn cascade_immersion<T, F, R>(root: &mut Node<T>, base: &R, f: &mut F)
-        where
-            F: FnMut(&mut T, &R) -> R,
-        {
-            let base = f(&mut root.value, base);
-            root.children
-                .iter_mut()
-                .for_each(|child| cascade_immersion(child, &base, f));
-        }
-
+        macros::cascade_immersion!(&mut Node<T>, iter_mut);
         cascade_immersion(&mut self.node, &base, &mut f);
         self
     }
