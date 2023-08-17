@@ -13,32 +13,62 @@ impl<'a, T> TraverseMut<'a, T, Asynchronous> {
 }
 
 impl<'a, T: Sync + Send> TraverseMut<'a, T, Asynchronous> {
-    pub fn new_async(node: &'a mut Node<T>) -> Self {
+    pub(crate) fn new_async(node: &'a mut Node<T>) -> Self {
         Self {
             node,
             strategy: PhantomData,
         }
     }
 
-    /// Calls the given closure along the tree rooted by self following the pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self, all by following the pre-order traversal.
     #[async_recursion]
-    pub async fn for_each<F>(&mut self, f: F) -> &mut Self
+    pub async fn preorder<F>(&mut self, f: F)
     where
         F: Fn(&mut Node<T>) + Sync + Send,
     {
         #[async_recursion]
-        pub async fn immersion<T, F>(root: &mut Node<T>, f: &F)
+        pub async fn immersion_mut<T, F>(root: &mut Node<T>, f: &F)
         where
             T: Sync + Send,
             F: Fn(&mut Node<T>) + Sync + Send,
         {
-            join_all(root.children.iter_mut().map(|child| immersion(child, f))).await;
+            f(root);
+
+            let futures: Vec<_> = root
+                .children
+                .iter_mut()
+                .map(|child| immersion_mut(child, f))
+                .collect();
+
+            join_all(futures).await;
+        }
+
+        immersion_mut(self.node, &f).await
+    }
+
+    /// Calls the given closure for each node in the tree rooted by self, all by following the post-order traversal.
+    #[async_recursion]
+    pub async fn postorder<F>(&mut self, f: F)
+    where
+        F: Fn(&mut Node<T>) + Sync + Send,
+    {
+        #[async_recursion]
+        pub async fn immersion_mut<T, F>(root: &mut Node<T>, f: &F)
+        where
+            T: Sync + Send,
+            F: Fn(&mut Node<T>) + Sync + Send,
+        {
+            let futures: Vec<_> = root
+                .children
+                .iter_mut()
+                .map(|child| immersion_mut(child, f))
+                .collect();
+
+            join_all(futures).await;
             f(root);
         }
 
-        immersion(self.node, &f).await;
-
-        self
+        immersion_mut(self.node, &f).await
     }
 
     /// Builds a new tree by calling the given closure along the tree rooted by self following the pre-order traversal.
@@ -126,13 +156,12 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     #[tokio::test]
-    async fn test_node_preorder_mut() {
+    async fn test_preorder() {
         let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
-        root.traverse_mut()
-            .into_async()
-            .for_each(|n| {
+        TraverseMut::new_async(&mut root)
+            .preorder(|n| {
                 n.value = n.value.saturating_add(1);
                 result.clone().lock().unwrap().push(n.value)
             })
@@ -147,7 +176,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_node_postorder_mut() {
+    async fn test_postorder() {
         let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));

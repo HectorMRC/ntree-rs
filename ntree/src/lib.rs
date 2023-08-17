@@ -3,6 +3,9 @@
 mod traversal;
 pub use traversal::*;
 
+mod order;
+pub use order::*;
+
 #[macro_export]
 macro_rules! node {
     ($value:expr) => (Node::new($value));

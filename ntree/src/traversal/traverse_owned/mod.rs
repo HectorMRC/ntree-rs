@@ -26,20 +26,6 @@ impl<'a, T, S> From<Node<T>> for TraverseOwned<T, S> {
     }
 }
 
-impl<T, S> TraverseOwned<T, S> {
-    pub fn node(&self) -> &Node<T> {
-        &self.node
-    }
-
-    pub fn node_mut(&mut self) -> &mut Node<T> {
-        &mut self.node
-    }
-
-    pub fn take(self) -> Node<T> {
-        self.node
-    }
-}
-
 impl<T> From<TraverseOwned<T, Asynchronous>> for TraverseOwned<T, Synchronous> {
     fn from(value: TraverseOwned<T, Asynchronous>) -> Self {
         TraverseOwned::new(value.node)
@@ -52,5 +38,19 @@ where
 {
     fn from(value: TraverseOwned<T, Synchronous>) -> Self {
         TraverseOwned::new_async(value.node)
+    }
+}
+
+impl<T, S> TraverseOwned<T, S> {
+    pub fn node(&self) -> &Node<T> {
+        &self.node
+    }
+
+    pub fn node_mut(&mut self) -> &mut Node<T> {
+        &mut self.node
+    }
+
+    pub fn take(self) -> Node<T> {
+        self.node
     }
 }

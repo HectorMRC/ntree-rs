@@ -13,7 +13,7 @@ use std::marker::PhantomData;
 
 /// Implements the traverse algorithms for a mutable reference of a [`Node`].
 pub struct TraverseMut<'a, T, S> {
-    pub node: &'a mut Node<T>,
+    node: &'a mut Node<T>,
     strategy: PhantomData<S>,
 }
 
@@ -38,5 +38,14 @@ where
 {
     fn from(value: TraverseMut<'a, T, Synchronous>) -> Self {
         TraverseMut::new_async(value.node)
+    }
+}
+impl<'a, T, S> TraverseMut<'a, T, S> {
+    pub fn node(&self) -> &Node<T> {
+        &self.node
+    }
+
+    pub fn node_mut(&mut self) -> &mut Node<T> {
+        &mut self.node
     }
 }

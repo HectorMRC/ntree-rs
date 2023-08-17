@@ -1,21 +1,30 @@
 //! Declarative macros for reducing code duplicity.
 
-macro_rules! for_each_immersion {
-    ($node:ty, $getter:tt) => {
-        pub fn for_each_immersion<O, T, F>(root: $node, f: &mut F)
+macro_rules! preorder_immersion {
+    ($node:ty, $iter:tt) => {
+        pub fn preorder_immersion<T, F>(root: $node, f: &mut F)
         where
             F: FnMut($node),
-            O: Order,
         {
-            for it in 0..=root.children.len() {
-                if O::evaluate_self(root, it) {
-                    f(root);
-                }
+            f(root);
+            root.children
+                .$iter()
+                .for_each(|node| preorder_immersion(node, f));
+        }
+    };
+}
 
-                let Some(index) = O::continue_with(root, it) else {continue;};
-                let Some(child) = root.children.$getter(index) else {break;};
-                for_each_immersion::<O, T, F>(child, f);
-            }
+macro_rules! postorder_immersion {
+    ($node:ty, $iter:tt) => {
+        pub fn postorder_immersion<T, F>(root: $node, f: &mut F)
+        where
+            F: FnMut($node),
+        {
+            root.children
+                .$iter()
+                .for_each(|node| postorder_immersion(node, f));
+
+            f(root)
         }
     };
 }
@@ -67,6 +76,7 @@ macro_rules! cascade_immersion {
 }
 
 pub(crate) use cascade_immersion;
-pub(crate) use for_each_immersion;
 pub(crate) use map_immersion;
+pub(crate) use postorder_immersion;
+pub(crate) use preorder_immersion;
 pub(crate) use reduce_immersion;
