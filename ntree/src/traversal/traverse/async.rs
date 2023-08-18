@@ -29,40 +29,14 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self, all by following the pre-order traversal.
+    /// Calls the given closure for each node in the tree rooted by self.
     #[async_recursion]
-    pub async fn preorder<F>(&self, f: F)
+    pub async fn for_each<F>(&self, f: F)
     where
         F: Fn(&Node<T>) + Sync + Send,
     {
         #[async_recursion]
-        pub async fn preorder_immersion<T, F>(root: &Node<T>, f: &F)
-        where
-            T: Sync + Send,
-            F: Fn(&Node<T>) + Sync + Send,
-        {
-            f(root);
-
-            let futures: Vec<_> = root
-                .children
-                .iter()
-                .map(|child| preorder_immersion(child, f))
-                .collect();
-
-            join_all(futures).await;
-        }
-
-        preorder_immersion(self.node, &f).await
-    }
-
-    /// Calls the given closure for each node in the tree rooted by self, all by following the post-order traversal.
-    #[async_recursion]
-    pub async fn postorder<F>(&self, f: F)
-    where
-        F: Fn(&Node<T>) + Sync + Send,
-    {
-        #[async_recursion]
-        pub async fn postorder_immersion<T, F>(root: &Node<T>, f: &F)
+        pub async fn for_each_immersion<T, F>(root: &Node<T>, f: &F)
         where
             T: Sync + Send,
             F: Fn(&Node<T>) + Sync + Send,
@@ -70,14 +44,14 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
             let futures: Vec<_> = root
                 .children
                 .iter()
-                .map(|child| postorder_immersion(child, f))
+                .map(|child| for_each_immersion(child, f))
                 .collect();
 
             join_all(futures).await;
             f(root);
         }
 
-        postorder_immersion(self.node, &f).await
+        for_each_immersion(self.node, &f).await
     }
 
     /// Builds a new tree by calling the given closure along the tree rooted by self following the
@@ -155,29 +129,12 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     #[tokio::test]
-    async fn test_preorder() {
+    async fn test_for_each() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
         Traverse::new_async(&root)
-            .preorder(|n| result.clone().lock().unwrap().push(n.value))
-            .await;
-
-        let got = result.lock().unwrap();
-        assert_eq!(got[0], 10);
-        assert!(got.contains(&20));
-        assert!(got.contains(&30));
-        assert!(got.contains(&40));
-        assert!(got.contains(&50));
-    }
-
-    #[tokio::test]
-    async fn test_postorder() {
-        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
-
-        let result = Arc::new(Mutex::new(Vec::new()));
-        Traverse::new_async(&root)
-            .postorder(|n| result.clone().lock().unwrap().push(n.value))
+            .for_each(|n| result.clone().lock().unwrap().push(n.value))
             .await;
 
         let got = result.lock().unwrap();

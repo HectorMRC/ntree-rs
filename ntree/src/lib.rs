@@ -1,10 +1,16 @@
 //! Definition of a node with an arbitrary number of children.
 
+mod order;
+pub use order::*;
+
 mod traversal;
 pub use traversal::*;
 
-mod order;
-pub use order::*;
+/// Asynchronous marker.
+pub struct Asynchronous;
+
+/// Synchronous marker.
+pub struct Synchronous;
 
 #[macro_export]
 macro_rules! node {

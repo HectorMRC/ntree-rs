@@ -1,38 +1,39 @@
 //! With order algorithms for an immutable reference of [Node].
 
-use crate::{Node, Order, Traverse};
 use std::marker::PhantomData;
 
-mod sync;
-pub use sync::*;
+use crate::{Node, Order};
 
-pub struct WithOrder<'a, O, T, S>
+pub struct WithOrderOwned<O, T, S>
 where
     O: Order,
 {
-    node: &'a Node<T>,
+    node: Node<T>,
     order: PhantomData<O>,
     strategy: PhantomData<S>,
 }
 
-impl<'a, O, T, S> From<Traverse<'a, T, S>> for WithOrder<'a, O, T, S>
+impl<O, T, S> WithOrderOwned<O, T, S>
 where
     O: Order,
 {
-    fn from(traverse: Traverse<'a, T, S>) -> Self {
+    pub(crate) fn new(node: Node<T>) -> Self {
         Self {
-            node: traverse.node,
+            node,
             order: PhantomData,
             strategy: PhantomData,
         }
     }
-}
 
-impl<'a, O, T, S> WithOrder<'a, O, T, S>
-where
-    O: Order,
-{
     pub fn node(&self) -> &Node<T> {
+        &self.node
+    }
+
+    pub fn node_mut(&mut self) -> &mut Node<T> {
+        &mut self.node
+    }
+
+    pub fn take(self) -> Node<T> {
         self.node
     }
 }

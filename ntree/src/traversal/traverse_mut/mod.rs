@@ -42,10 +42,10 @@ where
 }
 impl<'a, T, S> TraverseMut<'a, T, S> {
     pub fn node(&self) -> &Node<T> {
-        &self.node
+        self.node
     }
 
     pub fn node_mut(&mut self) -> &mut Node<T> {
-        &mut self.node
+        self.node
     }
 }

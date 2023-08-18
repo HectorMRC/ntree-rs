@@ -24,23 +24,13 @@ impl<T> TraverseOwned<T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self, all by following a pre-order traversal.
-    pub fn preorder<F>(mut self, mut f: F) -> Self
+    /// Calls the given closure for each node in the tree rooted by self.
+    pub fn for_each<F>(mut self, mut f: F) -> Self
     where
         F: FnMut(&mut Node<T>),
     {
-        macros::preorder_immersion!(&mut Node<T>, iter_mut);
-        preorder_immersion(&mut self.node, &mut f);
-        self
-    }
-
-    /// Calls the given closure for each node in the tree rooted by self, all by following a post-order traversal.
-    pub fn postorder<F>(mut self, mut f: F) -> Self
-    where
-        F: FnMut(&mut Node<T>),
-    {
-        macros::postorder_immersion!(&mut Node<T>, iter_mut);
-        postorder_immersion(&mut self.node, &mut f);
+        macros::for_each_immersion!(&mut Node<T>, iter_mut);
+        for_each_immersion(&mut self.node, &mut f);
         self
     }
 

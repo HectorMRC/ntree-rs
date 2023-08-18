@@ -24,23 +24,13 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self, all by following a pre-order traversal.
-    pub fn preorder<F>(self, mut f: F) -> Self
+    /// Calls the given closure for each node in the tree rooted by self.
+    pub fn for_each<F>(self, mut f: F) -> Self
     where
         F: FnMut(&mut Node<T>),
     {
-        macros::preorder_immersion!(&mut Node<T>, iter_mut);
-        preorder_immersion(self.node, &mut f);
-        self
-    }
-
-    /// Calls the given closure for each node in the tree rooted by self, all by following a post-order traversal.
-    pub fn postorder<F>(self, mut f: F) -> Self
-    where
-        F: FnMut(&mut Node<T>),
-    {
-        macros::postorder_immersion!(&mut Node<T>, iter_mut);
-        postorder_immersion(self.node, &mut f);
+        macros::for_each_immersion!(&mut Node<T>, iter_mut);
+        for_each_immersion(self.node, &mut f);
         self
     }
 
@@ -81,6 +71,19 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
 mod tests {
     use super::*;
     use crate::node;
+
+    #[test]
+    fn test_for_each() {
+        let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        TraverseMut::new(&mut root).for_each(|n| {
+            n.value = n.value.saturating_add(1);
+            result.push(n.value)
+        });
+
+        assert_eq!(result, vec![41, 21, 51, 31, 11]);
+    }
 
     #[test]
     fn test_reduce() {

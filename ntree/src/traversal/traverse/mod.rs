@@ -8,12 +8,12 @@ pub use r#async::*;
 mod sync;
 pub use sync::*;
 
-use crate::Node;
+use crate::{Node, Order, WithOrder};
 use std::marker::PhantomData;
 
 /// Implements the traverse algorithms for an immutable reference of a [`Node`].
 pub struct Traverse<'a, T, S> {
-    node: &'a Node<T>,
+    pub(crate) node: &'a Node<T>,
     strategy: PhantomData<S>,
 }
 
@@ -27,7 +27,14 @@ impl<'a, T, S> From<&'a Node<T>> for Traverse<'a, T, S> {
 }
 
 impl<'a, T, S> Traverse<'a, T, S> {
+    pub fn with_order<O>(self) -> WithOrder<'a, O, T, S>
+    where
+        O: Order,
+    {
+        self.into()
+    }
+
     pub fn node(&self) -> &Node<T> {
-        &self.node
+        self.node
     }
 }

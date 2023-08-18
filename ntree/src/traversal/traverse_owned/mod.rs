@@ -17,7 +17,7 @@ pub struct TraverseOwned<T, S> {
     strategy: PhantomData<S>,
 }
 
-impl<'a, T, S> From<Node<T>> for TraverseOwned<T, S> {
+impl<T, S> From<Node<T>> for TraverseOwned<T, S> {
     fn from(node: Node<T>) -> Self {
         Self {
             node,

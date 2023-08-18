@@ -1,4 +1,4 @@
-use crate::Node;
+use crate::{Node, Synchronous};
 
 mod traverse;
 pub use traverse::*;
@@ -10,12 +10,6 @@ mod traverse_owned;
 pub use traverse_owned::*;
 
 mod macros;
-
-/// Asynchronous marker.
-pub struct Asynchronous;
-
-/// Synchronous marker.
-pub struct Synchronous;
 
 impl<'a, T> Node<T> {
     /// Returns a synchronous instance of [Traverse] for the given reference of node.

@@ -1,28 +1,14 @@
 //! Declarative macros for reducing code duplicity.
 
-macro_rules! preorder_immersion {
+macro_rules! for_each_immersion {
     ($node:ty, $iter:tt) => {
-        pub fn preorder_immersion<T, F>(root: $node, f: &mut F)
-        where
-            F: FnMut($node),
-        {
-            f(root);
-            root.children
-                .$iter()
-                .for_each(|node| preorder_immersion(node, f));
-        }
-    };
-}
-
-macro_rules! postorder_immersion {
-    ($node:ty, $iter:tt) => {
-        pub fn postorder_immersion<T, F>(root: $node, f: &mut F)
+        pub fn for_each_immersion<T, F>(root: $node, f: &mut F)
         where
             F: FnMut($node),
         {
             root.children
                 .$iter()
-                .for_each(|node| postorder_immersion(node, f));
+                .for_each(|node| for_each_immersion(node, f));
 
             f(root)
         }
@@ -76,7 +62,6 @@ macro_rules! cascade_immersion {
 }
 
 pub(crate) use cascade_immersion;
+pub(crate) use for_each_immersion;
 pub(crate) use map_immersion;
-pub(crate) use postorder_immersion;
-pub(crate) use preorder_immersion;
 pub(crate) use reduce_immersion;
