@@ -1,9 +1,6 @@
 //! Synchronous traversal implementation.
 
-use crate::{
-    traversal::{macros, TraverseOwned},
-    Asynchronous, Node, Synchronous,
-};
+use crate::{traversal::TraverseOwned, Asynchronous, Node, Synchronous, TraverseMut};
 use std::marker::PhantomData;
 
 impl<T> TraverseOwned<T, Synchronous>
@@ -25,13 +22,22 @@ impl<T> TraverseOwned<T, Synchronous> {
     }
 
     /// Calls the given closure for each node in the tree rooted by self.
-    pub fn for_each<F>(mut self, mut f: F) -> Self
+    pub fn for_each<F>(self, mut f: F)
     where
-        F: FnMut(&mut Node<T>),
+        F: FnMut(T),
     {
-        macros::for_each_immersion!(&mut Node<T>, iter_mut);
-        for_each_immersion(&mut self.node, &mut f);
-        self
+        pub fn for_each_immersion<T, F>(root: Node<T>, f: &mut F)
+        where
+            F: FnMut(T),
+        {
+            root.children
+                .into_iter()
+                .for_each(|node| for_each_immersion(node, f));
+
+            f(root.value)
+        }
+
+        for_each_immersion(self.node, &mut f);
     }
 
     /// Builds a new tree by calling the given closure along the tree rooted by self.
@@ -79,13 +85,12 @@ impl<T> TraverseOwned<T, Synchronous> {
 
     /// Calls the given closure along the tree rooted by self, providing the parent's
     /// result to its children.
-    pub fn cascade<F, R>(mut self, base: R, mut f: F) -> Self
+    pub fn cascade<F, R>(mut self, base: R, f: F) -> Self
     where
         F: FnMut(&mut Node<T>, &R) -> R,
         R: Sized,
     {
-        macros::cascade_immersion!(&mut Node<T>, iter_mut);
-        cascade_immersion(&mut self.node, &base, &mut f);
+        TraverseMut::new(&mut self.node).cascade(base, f);
         self
     }
 }

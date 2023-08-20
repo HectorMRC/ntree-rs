@@ -25,13 +25,12 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
     }
 
     /// Calls the given closure for each node in the tree rooted by self.
-    pub fn for_each<F>(self, mut f: F) -> Self
+    pub fn for_each<F>(self, mut f: F)
     where
         F: FnMut(&mut Node<T>),
     {
         macros::for_each_immersion!(&mut Node<T>, iter_mut);
         for_each_immersion(self.node, &mut f);
-        self
     }
 
     /// Builds a new tree by calling the given closure along the tree rooted by self.
