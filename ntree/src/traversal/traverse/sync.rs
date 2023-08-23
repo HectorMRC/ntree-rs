@@ -46,7 +46,7 @@ mod tests {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();
-        Traverse::new(&root).for_each(|n| result.push(n.value));
+        root.traverse().for_each(|n| result.push(n.value));
         assert_eq!(result, vec![40, 20, 50, 30, 10]);
     }
 
@@ -55,7 +55,7 @@ mod tests {
         let original = node!(1, node!(2, node!(4)), node!(3, node!(5)));
 
         let copy = original.clone();
-        let new_root = Traverse::new(&copy).map(|n| n.value % 2 == 0);
+        let new_root = copy.traverse().map(|n| n.value % 2 == 0);
         assert_eq!(original, copy);
 
         let want = node!(false, node!(true, node!(true)), node!(false, node!(false)));

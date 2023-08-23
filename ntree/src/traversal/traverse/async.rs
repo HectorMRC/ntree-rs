@@ -133,7 +133,8 @@ mod tests {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
-        Traverse::new_async(&root)
+        root.traverse()
+            .into_async()
             .for_each(|n| result.clone().lock().unwrap().push(n.value))
             .await;
 
@@ -146,7 +147,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_node_reduce() {
+    async fn test_map() {
+        let original = node!(1, node!(2, node!(4)), node!(3, node!(5)));
+
+        let copy = original.clone();
+        let new_root = copy.traverse().into_async().map(|n| n.value % 2 == 0).await;
+        assert_eq!(original, copy);
+
+        let want = node!(false, node!(true, node!(true)), node!(false, node!(false)));
+        assert_eq!(new_root.take(), want);
+    }
+
+    #[tokio::test]
+    async fn test_reduce() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));
@@ -170,7 +183,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_node_cascade() {
+    async fn test_cascade() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let result = Arc::new(Mutex::new(Vec::new()));

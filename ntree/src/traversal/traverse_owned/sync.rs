@@ -101,33 +101,28 @@ mod tests {
         let mut result = Vec::new();
         root.into_traverse().for_each(|value| result.push(value));
 
-        assert_eq!(result, vec![40, 20, 50, 31, 11]);
+        assert_eq!(result, vec![40, 20, 50, 30, 10]);
     }
 
     #[test]
     fn test_map() {
         let original = node!(1, node!(2, node!(4)), node!(3, node!(5)));
         let new_root = original
-            .clone()
             .into_traverse()
-            .map(|value, _| value % 2 == 0);
+            .map(|value, children| value + children.len());
 
-        let want = node!(2, node!(3, node!(5)), node!(4, node!(6)));
-        assert_eq!(original, want);
-
-        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        let want = node!(3, node!(3, node!(4)), node!(4, node!(5)));
         assert_eq!(new_root.take(), want);
     }
 
     #[test]
     fn test_reduce() {
-        let root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
+        let root = node!(1, node!(2, node!(4)), node!(3, node!(5)));
+        let sum = root.into_traverse().reduce(|value, results| {
+            value + results.len() as isize + results.iter().sum::<isize>()
+        });
 
-        let sum = root
-            .into_traverse()
-            .reduce(|value, results| value + results.iter().sum::<i32>());
-
-        assert_eq!(sum, 155);
+        assert_eq!(sum, 19);
     }
 
     #[test]
