@@ -30,46 +30,10 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self.
-    pub fn for_each<F>(self, mut f: F)
-    where
-        F: FnMut(&Node<T>),
-    {
-        macros::for_each_immersion!(&Node<T>, iter);
-        for_each_immersion(self.node, &mut f);
-    }
-
-    /// Builds a new tree by calling the given closure along the tree rooted by self.
-    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
-    where
-        F: FnMut(&Node<T>) -> R,
-    {
-        macros::map_immersion!(&Node<T>, iter);
-        TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
-    }
-
-    /// Calls the given closure along the tree rooted by self, reducing it into a single
-    /// value.
-    pub fn reduce<F, R>(self, mut f: F) -> R
-    where
-        F: FnMut(&Node<T>, Vec<R>) -> R,
-        R: Sized,
-    {
-        macros::reduce_immersion!(&Node<T>, iter);
-        reduce_immersion(self.node, &mut f)
-    }
-
-    /// Calls the given closure along the tree rooted by self, providing the parent's
-    /// result to its children.
-    pub fn cascade<F, R>(self, base: R, mut f: F) -> Self
-    where
-        F: FnMut(&Node<T>, &R) -> R,
-        R: Sized,
-    {
-        macros::cascade_immersion!(&Node<T>, iter);
-        cascade_immersion(self.node, &base, &mut f);
-        self
-    }
+    macros::for_each!(&Node<T>, iter);
+    macros::map!(&Node<T>, iter);
+    macros::reduce!(&Node<T>, iter);
+    macros::cascade!(&Node<T>, iter);
 }
 
 #[cfg(test)]
@@ -84,6 +48,18 @@ mod tests {
         let mut result = Vec::new();
         Traverse::new(&root).for_each(|n| result.push(n.value));
         assert_eq!(result, vec![40, 20, 50, 30, 10]);
+    }
+
+    #[test]
+    fn test_map() {
+        let original = node!(1, node!(2, node!(4)), node!(3, node!(5)));
+
+        let copy = original.clone();
+        let new_root = Traverse::new(&copy).map(|n| n.value % 2 == 0);
+        assert_eq!(original, copy);
+
+        let want = node!(false, node!(true, node!(true)), node!(false, node!(false)));
+        assert_eq!(new_root.take(), want);
     }
 
     #[test]

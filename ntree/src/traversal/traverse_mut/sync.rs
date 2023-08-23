@@ -24,46 +24,10 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self.
-    pub fn for_each<F>(self, mut f: F)
-    where
-        F: FnMut(&mut Node<T>),
-    {
-        macros::for_each_immersion!(&mut Node<T>, iter_mut);
-        for_each_immersion(self.node, &mut f);
-    }
-
-    /// Builds a new tree by calling the given closure along the tree rooted by self.
-    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
-    where
-        F: FnMut(&Node<T>) -> R,
-    {
-        macros::map_immersion!(&Node<T>, iter);
-        TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
-    }
-
-    /// Calls the given closure along the tree rooted by self, reducing it into a single
-    /// value.
-    pub fn reduce<F, R>(self, mut f: F) -> R
-    where
-        F: FnMut(&mut Node<T>, Vec<R>) -> R,
-        R: Sized,
-    {
-        macros::reduce_immersion!(&mut Node<T>, iter_mut);
-        reduce_immersion(self.node, &mut f)
-    }
-
-    /// Calls the given closure along the tree rooted by self, providing the parent's
-    /// result to its children.
-    pub fn cascade<F, R>(self, base: R, mut f: F) -> Self
-    where
-        F: FnMut(&mut Node<T>, &R) -> R,
-        R: Sized,
-    {
-        macros::cascade_immersion!(&mut Node<T>, iter_mut);
-        cascade_immersion(self.node, &base, &mut f);
-        self
-    }
+    macros::for_each!(&mut Node<T>, iter_mut);
+    macros::map!(&mut Node<T>, iter_mut);
+    macros::reduce!(&mut Node<T>, iter_mut);
+    macros::cascade!(&mut Node<T>, iter_mut);
 }
 
 #[cfg(test)]
@@ -76,12 +40,27 @@ mod tests {
         let mut root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();
-        TraverseMut::new(&mut root).for_each(|n| {
+        root.traverse_mut().for_each(|n| {
             n.value = n.value.saturating_add(1);
             result.push(n.value)
         });
 
         assert_eq!(result, vec![41, 21, 51, 31, 11]);
+    }
+
+    #[test]
+    fn test_map() {
+        let mut original = node!(1, node!(2, node!(4)), node!(3, node!(5)));
+        let new_root = original.traverse_mut().map(|n| {
+            n.value += 1;
+            n.value % 2 == 0
+        });
+
+        let want = node!(2, node!(3, node!(5)), node!(4, node!(6)));
+        assert_eq!(original, want);
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root.take(), want);
     }
 
     #[test]

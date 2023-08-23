@@ -32,6 +32,8 @@ where
                     OrderFlow::EvaluateSelf => {
                         value = Some(f(root, &children));
                     }
+                    OrderFlow::Continue => continue,
+                    OrderFlow::Break => break,
                 }
             }
 

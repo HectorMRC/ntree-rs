@@ -9,6 +9,8 @@ use crate::Node;
 pub enum OrderFlow {
     ContinueWith(usize),
     EvaluateSelf,
+    Continue,
+    Break,
 }
 
 pub trait Order {

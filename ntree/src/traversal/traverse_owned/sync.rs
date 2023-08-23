@@ -1,6 +1,9 @@
 //! Synchronous traversal implementation.
 
-use crate::{traversal::TraverseOwned, Asynchronous, Node, Synchronous, TraverseMut};
+use crate::{
+    traversal::{macros, TraverseOwned},
+    Asynchronous, Node, Synchronous,
+};
 use std::marker::PhantomData;
 
 impl<T> TraverseOwned<T, Synchronous>
@@ -83,14 +86,5 @@ impl<T> TraverseOwned<T, Synchronous> {
         reduce_immersion(self.node, &mut f)
     }
 
-    /// Calls the given closure along the tree rooted by self, providing the parent's
-    /// result to its children.
-    pub fn cascade<F, R>(mut self, base: R, f: F) -> Self
-    where
-        F: FnMut(&mut Node<T>, &R) -> R,
-        R: Sized,
-    {
-        TraverseMut::new(&mut self.node).cascade(base, f);
-        self
-    }
+    macros::cascade!(@owned &mut Node<T>, iter_mut);
 }
