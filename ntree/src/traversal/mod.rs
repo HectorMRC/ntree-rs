@@ -10,6 +10,8 @@ mod traverse_owned;
 pub use traverse_owned::*;
 
 mod macros;
+#[cfg(feature = "async")]
+mod macros_async;
 
 impl<'a, T> Node<T> {
     /// Returns a synchronous instance of [Traverse] for the given reference of node.

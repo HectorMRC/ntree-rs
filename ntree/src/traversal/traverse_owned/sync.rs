@@ -44,7 +44,7 @@ impl<T> TraverseOwned<T, Synchronous> {
     }
 
     /// Builds a new tree by calling the given closure along the tree rooted by self.
-    pub fn map<O, F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
+    pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
         F: FnMut(T, &[Node<T>]) -> R,
     {
@@ -87,4 +87,65 @@ impl<T> TraverseOwned<T, Synchronous> {
     }
 
     macros::cascade!(@owned &mut Node<T>, iter_mut);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::node;
+
+    #[test]
+    fn test_for_each() {
+        let root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.into_traverse().for_each(|value| result.push(value));
+
+        assert_eq!(result, vec![40, 20, 50, 31, 11]);
+    }
+
+    #[test]
+    fn test_map() {
+        let original = node!(1, node!(2, node!(4)), node!(3, node!(5)));
+        let new_root = original
+            .clone()
+            .into_traverse()
+            .map(|value, _| value % 2 == 0);
+
+        let want = node!(2, node!(3, node!(5)), node!(4, node!(6)));
+        assert_eq!(original, want);
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root.take(), want);
+    }
+
+    #[test]
+    fn test_reduce() {
+        let root = node!(10_i32, node!(20, node!(40)), node!(30, node!(50)));
+
+        let sum = root
+            .into_traverse()
+            .reduce(|value, results| value + results.iter().sum::<i32>());
+
+        assert_eq!(sum, 155);
+    }
+
+    #[test]
+    fn test_cascade() {
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+        let root = root
+            .into_traverse()
+            .cascade(0, |n, parent_value| {
+                let next = n.value + parent_value;
+                n.value = *parent_value;
+                next
+            })
+            .take();
+
+        assert_eq!(root.value, 0);
+        assert_eq!(root.children[0].value, 10);
+        assert_eq!(root.children[1].value, 10);
+        assert_eq!(root.children[0].children[0].value, 30);
+        assert_eq!(root.children[1].children[0].value, 40);
+    }
 }

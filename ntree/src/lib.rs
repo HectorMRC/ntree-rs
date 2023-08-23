@@ -1,8 +1,5 @@
 //! Definition of a node with an arbitrary number of children.
 
-mod order;
-pub use order::*;
-
 mod traversal;
 pub use traversal::*;
 
