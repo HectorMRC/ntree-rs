@@ -74,7 +74,7 @@ macro_rules! reduce {
 }
 
 macro_rules! cascade {
-    (@internal, $node:ty, $iter:ident) => {
+    (@internal $node:ty, $iter:ident) => {
         pub fn cascade_immersion<T, F, R>(root: $node, base: &R, f: &mut F)
         where
             F: FnMut($node, &R) -> R,
@@ -93,7 +93,7 @@ macro_rules! cascade {
             F: FnMut($node, &R) -> R,
             R: Sized,
         {
-            macros::cascade!(@internal, $node, $iter);
+            macros::cascade!(@internal $node, $iter);
             cascade_immersion(&mut self.node, &base, &mut f);
             self
         }
@@ -106,7 +106,7 @@ macro_rules! cascade {
             F: FnMut($node, &R) -> R,
             R: Sized,
         {
-            macros::cascade!(@internal, $node, $iter);
+            macros::cascade!(@internal $node, $iter);
             cascade_immersion(self.node, &base, &mut f);
             self
         }
