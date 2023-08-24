@@ -1,16 +1,12 @@
 //! Synchronous traversal implementation.
 
-use crate::{
-    traversal::{macros, TraverseOwned},
-    Asynchronous, Node, Synchronous,
-};
+use crate::{traversal::TraverseOwned, Asynchronous, Node, Synchronous, TraverseMut};
 use std::marker::PhantomData;
 
 impl<T> TraverseOwned<T, Synchronous>
 where
     T: Sync + Send,
 {
-    /// Converts the synchronous traverse into an asynchronous one.
     pub fn into_async(self) -> TraverseOwned<T, Asynchronous> {
         TraverseOwned::<T, Asynchronous>::from(self)
     }
@@ -24,7 +20,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self.
+    /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way.
     pub fn for_each<F>(self, mut f: F)
     where
         F: FnMut(T),
@@ -43,7 +39,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         for_each_immersion(self.node, &mut f);
     }
 
-    /// Builds a new tree by calling the given closure along the tree rooted by self.
+    /// Traverses the tree rooted by self in `pre-order`, building a new tree by calling the given closure along the way.
     pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
     where
         F: FnMut(T, &[Node<T>]) -> R,
@@ -63,8 +59,7 @@ impl<T> TraverseOwned<T, Synchronous> {
         TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
     }
 
-    /// Calls the given closure along the tree rooted by self, reducing it into a single
-    /// value.
+    /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way and providing its results from children to parent.
     pub fn reduce<F, R>(self, mut f: F) -> R
     where
         F: FnMut(T, Vec<R>) -> R,
@@ -86,7 +81,15 @@ impl<T> TraverseOwned<T, Synchronous> {
         reduce_immersion(self.node, &mut f)
     }
 
-    macros::cascade!(@owned &mut Node<T>, iter_mut);
+    /// Traverses the tree rooted by self in `pre-order`, calling the given closure along the way and providing its result from parent to children.
+    pub fn cascade<F, R>(mut self, base: R, f: F) -> Self
+    where
+        F: FnMut(&mut Node<T>, &R) -> R,
+        R: Sized,
+    {
+        TraverseMut::new(&mut self.node).cascade(base, f);
+        self
+    }
 }
 
 #[cfg(test)]

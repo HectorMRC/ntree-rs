@@ -10,7 +10,6 @@ impl<'a, T> TraverseMut<'a, T, Synchronous>
 where
     T: Sync + Send,
 {
-    /// Converts the synchronous traverse into an asynchronous one.
     pub fn into_async(self) -> TraverseMut<'a, T, Asynchronous> {
         TraverseMut::<'a, T, Asynchronous>::from(self)
     }

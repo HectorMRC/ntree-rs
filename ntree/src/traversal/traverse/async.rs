@@ -21,7 +21,7 @@ impl<'a, T> Traverse<'a, T, Asynchronous> {
     }
 }
 
-impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
+impl<'a, T: Sync + Send + 'a> Traverse<'a, T, Asynchronous> {
     pub(crate) fn new_async(node: &'a Node<T>) -> Self {
         Self {
             node,
@@ -29,96 +29,101 @@ impl<'a, T: Sync + Send> Traverse<'a, T, Asynchronous> {
         }
     }
 
-    /// Calls the given closure for each node in the tree rooted by self.
     #[async_recursion]
-    pub async fn for_each<F>(&self, f: F)
+    async fn for_each_immersion<F>(root: &Node<T>, f: &F)
     where
         F: Fn(&Node<T>) + Sync + Send,
     {
-        #[async_recursion]
-        pub async fn for_each_immersion<T, F>(root: &Node<T>, f: &F)
-        where
-            T: Sync + Send,
-            F: Fn(&Node<T>) + Sync + Send,
-        {
-            let futures: Vec<_> = root
-                .children
-                .iter()
-                .map(|child| for_each_immersion(child, f))
-                .collect();
+        let futures: Vec<_> = root
+            .children
+            .iter()
+            .map(|child| Self::for_each_immersion(child, f))
+            .collect();
 
-            join_all(futures).await;
-            f(root);
-        }
-
-        for_each_immersion(self.node, &f).await
+        join_all(futures).await;
+        f(root);
     }
 
-    /// Builds a new tree by calling the given closure along the tree rooted by self following the
-    /// pre-order traversal.
+    /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way.
+    pub async fn for_each<F>(self, f: F)
+    where
+        F: Fn(&Node<T>) + Sync + Send,
+    {
+        Self::for_each_immersion(self.node, &f).await
+    }
+
     #[async_recursion]
-    pub async fn map<F, R>(&self, f: F) -> TraverseOwned<R, Asynchronous>
+    async fn map_immersion<F, R>(root: &Node<T>, f: &F) -> Node<R>
     where
         F: Fn(&Node<T>) -> R + Sync + Send,
         R: Sized + Sync + Send,
     {
-        #[async_recursion]
-        pub async fn immersion<T, F, R>(root: &Node<T>, f: &F) -> Node<R>
-        where
-            T: Sync + Send,
-            F: Fn(&Node<T>) -> R + Sync + Send,
-            R: Sized + Sync + Send,
-        {
-            Node::new(f(root)).with_children(
-                join_all(root.children.iter().map(|child| immersion(child, f))).await,
+        Node::new(f(root)).with_children(
+            join_all(
+                root.children
+                    .iter()
+                    .map(|child| Self::map_immersion(child, f)),
             )
-        }
-
-        TraverseOwned::new_async(immersion(self.node, &f).await)
+            .await,
+        )
     }
 
-    /// Calls the given closure along the tree rooted by self, reducing it into a single
-    /// value.
+    /// Traverses the tree rooted by self in `pre-order`, building a new tree by calling the given closure along the way.
+    pub async fn map<F, R>(self, f: F) -> TraverseOwned<R, Asynchronous>
+    where
+        F: Fn(&Node<T>) -> R + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        TraverseOwned::new_async(Self::map_immersion(self.node, &f).await)
+    }
+
     #[async_recursion]
-    pub async fn reduce<F, R>(&self, f: F) -> R
+    async fn reduce_immersion<F, R>(root: &Node<T>, f: &F) -> R
     where
         F: Fn(&Node<T>, Vec<R>) -> R + Sync + Send,
         R: Sized + Sync + Send,
     {
-        #[async_recursion]
-        async fn immersion<T, F, R>(root: &Node<T>, f: &F) -> R
-        where
-            T: Sync + Send,
-            F: Fn(&Node<T>, Vec<R>) -> R + Sync + Send,
-            R: Sized + Sync + Send,
-        {
-            let results = join_all(root.children.iter().map(|child| immersion(child, f))).await;
-            f(root, results)
-        }
-
-        immersion(self.node, &f).await
+        let results = join_all(
+            root.children
+                .iter()
+                .map(|child| Self::reduce_immersion(child, f)),
+        )
+        .await;
+        f(root, results)
     }
 
-    /// Calls the given closure along the tree rooted by self, providing the parent's
-    /// data to its children.
+    /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way and providing its results from children to parent.
+    pub async fn reduce<F, R>(self, f: F) -> R
+    where
+        F: Fn(&Node<T>, Vec<R>) -> R + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        Self::reduce_immersion(self.node, &f).await
+    }
+
     #[async_recursion]
-    pub async fn cascade<F, R>(&self, base: R, f: F)
+    async fn cascade_immersion<F, R>(root: &Node<T>, base: &R, f: &F)
     where
         F: Fn(&Node<T>, &R) -> R + Sync + Send,
         R: Sized + Sync + Send,
     {
-        #[async_recursion]
-        async fn immersion<T, F, R>(root: &Node<T>, base: &R, f: &F)
-        where
-            T: Sync + Send,
-            F: Fn(&Node<T>, &R) -> R + Sync + Send,
-            R: Sized + Sync + Send,
-        {
-            let base = f(root, base);
-            join_all(root.children.iter().map(|child| immersion(child, &base, f))).await;
-        }
+        let base = f(root, base);
+        join_all(
+            root.children
+                .iter()
+                .map(|child| Self::cascade_immersion(child, &base, f)),
+        )
+        .await;
+    }
 
-        immersion(self.node, &base, &f).await
+    /// Traverses the tree rooted by self in `pre-order`, calling the given closure along the way and providing its result from parent to children.
+    pub async fn cascade<F, R>(self, base: R, f: F) -> Traverse<'a, T, Asynchronous>
+    where
+        F: Fn(&Node<T>, &R) -> R + Sync + Send,
+        R: Sized + Sync + Send,
+    {
+        Self::cascade_immersion(self.node, &base, &f).await;
+        self
     }
 }
 

@@ -16,7 +16,6 @@ impl<'a, T> Traverse<'a, T, Synchronous>
 where
     T: Sync + Send,
 {
-    /// Converts the synchronous traverse into an asynchronous one.
     pub fn into_async(self) -> Traverse<'a, T, Asynchronous> {
         Traverse::<'a, T, Asynchronous>::from(self)
     }

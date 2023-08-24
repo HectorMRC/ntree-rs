@@ -1,8 +1,6 @@
-//! Declarative macros for reducing code duplicity.
-
 macro_rules! for_each {
     ($node:ty, $iter:tt) => {
-        /// Calls the given closure for each node in the tree rooted by self.
+        /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way.
         pub fn for_each<F>(self, mut f: F)
         where
             F: FnMut($node),
@@ -25,7 +23,7 @@ macro_rules! for_each {
 
 macro_rules! map {
     ($node:ty, $iter:tt) => {
-        /// Builds a new tree by calling the given closure along the tree rooted by self.
+        /// Traverses the tree rooted by self in `pre-order`, building a new tree by calling the given closure along the way.
         pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
         where
             F: FnMut($node) -> R,
@@ -49,8 +47,7 @@ macro_rules! map {
 
 macro_rules! reduce {
     ($node:ty, $iter:ident) => {
-        /// Calls the given closure along the tree rooted by self, reducing it into a single
-        /// value.
+        /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way and providing its results from children to parent.
         pub fn reduce<F, R>(self, mut f: F) -> R
         where
             F: FnMut($node, Vec<R>) -> R,
@@ -74,39 +71,23 @@ macro_rules! reduce {
 }
 
 macro_rules! cascade {
-    (@internal $node:ty, $iter:ident) => {
-        pub fn cascade_immersion<T, F, R>(root: $node, base: &R, f: &mut F)
-        where
-            F: FnMut($node, &R) -> R,
-        {
-            let base = f(root, base);
-            root.children
-                .$iter()
-                .for_each(|child| cascade_immersion(child, &base, f));
-        }
-    };
-    (@owned $node:ty, $iter:ident) => {
-        /// Calls the given closure along the tree rooted by self, providing the parent's
-        /// result to its children.
-        pub fn cascade<F, R>(mut self, base: R, mut f: F) -> Self
-        where
-            F: FnMut($node, &R) -> R,
-            R: Sized,
-        {
-            macros::cascade!(@internal $node, $iter);
-            cascade_immersion(&mut self.node, &base, &mut f);
-            self
-        }
-    };
     ($node:ty, $iter:ident) => {
-        /// Calls the given closure along the tree rooted by self, providing the parent's
-        /// result to its children.
+        /// Traverses the tree rooted by self in `pre-order`, calling the given closure along the way and providing its result from parent to children.
         pub fn cascade<F, R>(self, base: R, mut f: F) -> Self
         where
             F: FnMut($node, &R) -> R,
             R: Sized,
         {
-            macros::cascade!(@internal $node, $iter);
+            pub fn cascade_immersion<T, F, R>(root: $node, base: &R, f: &mut F)
+            where
+                F: FnMut($node, &R) -> R,
+            {
+                let base = f(root, base);
+                root.children
+                    .$iter()
+                    .for_each(|child| cascade_immersion(child, &base, f));
+            }
+
             cascade_immersion(self.node, &base, &mut f);
             self
         }
