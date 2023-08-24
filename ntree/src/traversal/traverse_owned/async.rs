@@ -42,7 +42,7 @@ impl<T: Sync + Send> TraverseOwned<T, Asynchronous> {
     where
         F: Fn(T) + Sync + Send,
     {
-        Self::for_each_immersion(self.node, &f).await
+        Self::for_each_immersion(self.node, &f).await;
     }
 
     #[async_recursion]

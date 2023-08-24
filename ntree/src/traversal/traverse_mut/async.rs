@@ -36,11 +36,12 @@ impl<'a, T: Sync + Send + 'a> TraverseMut<'a, T, Asynchronous> {
     }
 
     /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way.
-    pub async fn for_each<F>(self, f: F)
+    pub async fn for_each<F>(self, f: F) -> TraverseMut<'a, T, Asynchronous>
     where
         F: Fn(&mut Node<T>) + Sync + Send,
     {
-        Self::for_each_immersion(self.node, &f).await
+        Self::for_each_immersion(self.node, &f).await;
+        self
     }
 
     #[async_recursion]

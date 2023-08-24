@@ -1,7 +1,7 @@
 macro_rules! for_each {
     ($node:ty, $iter:tt) => {
         /// Traverses the tree rooted by self in `post-order`, calling the given closure along the way.
-        pub fn for_each<F>(self, mut f: F)
+        pub fn for_each<F>(self, mut f: F) -> Self
         where
             F: FnMut($node),
         {
@@ -17,6 +17,7 @@ macro_rules! for_each {
             }
 
             for_each_immersion(self.node, &mut f);
+            self
         }
     };
 }
