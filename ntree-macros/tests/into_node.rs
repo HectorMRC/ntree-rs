@@ -11,10 +11,10 @@ fn test_into_node() {
 }
 
 #[test]
-fn test_to_node() {
+fn test_as_node() {
     #[derive(Debug, IntoNode, PartialEq)]
     struct Item(&'static str);
 
-    let node = Item("test").to_node();
+    let node = Item("test").as_node();
     assert_eq!(node, node!(Item("test")));
 }

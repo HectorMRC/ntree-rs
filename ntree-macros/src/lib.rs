@@ -13,7 +13,7 @@ pub fn into_node(input: TokenStream) -> TokenStream {
         }
 
         impl #ident {
-            fn to_node(self) -> Node<Item> {
+            fn as_node(self) -> Node<Item> {
                 self.into()
             }
         }
