@@ -3,7 +3,6 @@ macro_rules! for_each {
         #[async_recursion]
         async fn for_each_immersion<F>(root: $node, f: &F)
         where
-            T: 'async_recursion,
             F: Fn($node) + Sync + Send,
         {
             let futures: Vec<_> = root
