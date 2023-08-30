@@ -7,7 +7,7 @@ pub fn into_node(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
     let code = quote! {
         impl Into<Node<#ident>> for #ident {
-            fn into(self) -> Node<Item> {
+            fn into(self) -> Node<Self> {
                 Node::new(self)
             }
         }
