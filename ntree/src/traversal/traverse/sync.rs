@@ -50,8 +50,7 @@ where
             let mut children: Vec<R> = root
                 .children
                 .iter()
-                .map(|node| traverse_immersion(node, &base, f))
-                .flatten()
+                .flat_map(|node| traverse_immersion(node, &base, f))
                 .collect();
 
             let mut preorder_list = vec![base];
@@ -77,8 +76,7 @@ where
             let mut children: Vec<R> = root
                 .children
                 .iter()
-                .map(|node| traverse_immersion(node, f))
-                .flatten()
+                .flat_map(|node| traverse_immersion(node, f))
                 .collect();
 
             children.push(f(root, &children));
