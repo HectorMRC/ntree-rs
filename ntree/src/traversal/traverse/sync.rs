@@ -2,7 +2,7 @@
 
 use crate::{
     traversal::{macros, Traverse},
-    Asynchronous, Node, Synchronous, TraverseOwned,
+    Asynchronous, Node, Synchronous, TraverseOwned, WithPost, WithPre, WithPrePost,
 };
 use std::marker::PhantomData;
 
@@ -33,6 +33,92 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
     macros::map!(&Node<T>, iter);
     macros::reduce!(&Node<T>, iter);
     macros::cascade!(&Node<T>, iter);
+}
+
+impl<'a, T, R, F> WithPre<'a, T, R, F, Synchronous>
+where
+    F: FnMut(&Node<T>, &R) -> R,
+{
+    /// Traverses the tree executing the associated closure in pre-order.
+    /// Returns a vector with all the results of the closure (in pre-order).
+    pub fn traverse(mut self, base: R) -> Vec<R> {
+        pub fn traverse_immersion<T, R, F>(root: &Node<T>, base: &R, f: &mut F) -> Vec<R>
+        where
+            F: FnMut(&Node<T>, &R) -> R,
+        {
+            let base = f(root, base);
+            let mut children: Vec<R> = root
+                .children
+                .iter()
+                .map(|node| traverse_immersion(node, &base, f))
+                .flatten()
+                .collect();
+
+            let mut preorder_list = vec![base];
+            preorder_list.append(&mut children);
+            preorder_list
+        }
+
+        traverse_immersion(self.node, &base, &mut self.pre)
+    }
+}
+
+impl<'a, T, R, F> WithPost<'a, T, R, F, Synchronous>
+where
+    F: FnMut(&Node<T>, &[R]) -> R,
+{
+    /// Traverses the tree executing the associated closure in post-order.
+    /// Returns a vector with all the results of the closure (in post-order).
+    pub fn traverse(mut self) -> Vec<R> {
+        pub fn traverse_immersion<T, R, F>(root: &Node<T>, f: &mut F) -> Vec<R>
+        where
+            F: FnMut(&Node<T>, &[R]) -> R,
+        {
+            let mut children: Vec<R> = root
+                .children
+                .iter()
+                .map(|node| traverse_immersion(node, f))
+                .flatten()
+                .collect();
+
+            children.push(f(root, &children));
+            children
+        }
+
+        traverse_immersion(self.node, &mut self.post)
+    }
+}
+
+impl<'a, T, R, U, F1, F2> WithPrePost<'a, T, R, U, F1, F2, Synchronous>
+where
+    F1: FnMut(&Node<T>, &R) -> R,
+    F2: FnMut(&Node<T>, &[U]) -> U,
+{
+    /// Traverses the tree executing both associated closures when corresponding.
+    /// Returns the result of the latest call of the post closure.
+    pub fn traverse(mut self, base: R) -> U {
+        pub fn traverse_immersion<T, R, U, F1, F2>(
+            root: &Node<T>,
+            base: &R,
+            pre: &mut F1,
+            post: &mut F2,
+        ) -> U
+        where
+            F1: FnMut(&Node<T>, &R) -> R,
+            F2: FnMut(&Node<T>, &[U]) -> U,
+        {
+            let base = pre(root, base);
+            let children: Vec<U> = root
+                .children
+                .iter()
+                .map(|node| traverse_immersion(node, &base, pre, post))
+                .collect();
+
+            post(root, &children)
+        }
+
+        traverse_immersion(self.node, &base, &mut self.pre, &mut self.post)
+    }
 }
 
 #[cfg(test)]

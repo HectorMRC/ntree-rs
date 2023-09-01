@@ -63,6 +63,7 @@ macro_rules! reduce {
                     .$iter()
                     .map(|child| reduce_immersion(child, f))
                     .collect();
+
                 f(root, results)
             }
 
