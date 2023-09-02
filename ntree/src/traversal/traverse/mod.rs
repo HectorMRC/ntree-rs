@@ -75,7 +75,7 @@ where
 {
     pub fn post<U, P>(self, post: P) -> WithPrePost<'a, T, R, U, F, P, S>
     where
-        P: FnMut(&Node<T>, &[U]) -> U,
+        P: FnMut(&Node<T>, R, &[U]) -> U,
     {
         WithPrePost {
             node: self.node,
@@ -99,30 +99,11 @@ where
     strategy: PhantomData<S>,
 }
 
-impl<'a, T, R, F, S> WithPost<'a, T, R, F, S>
-where
-    F: FnMut(&Node<T>, &[R]) -> R,
-{
-    pub fn pre<U, P>(self, pre: P) -> WithPrePost<'a, T, U, R, P, F, S>
-    where
-        P: FnMut(&Node<T>, &U) -> U,
-    {
-        WithPrePost {
-            node: self.node,
-            pre,
-            post: self.post,
-            r: PhantomData,
-            u: PhantomData,
-            strategy: PhantomData,
-        }
-    }
-}
-
 /// Represents a combination of both pre and post traversals.
 pub struct WithPrePost<'a, T, R, U, F1, F2, S>
 where
     F1: FnMut(&Node<T>, &R) -> R,
-    F2: FnMut(&Node<T>, &[U]) -> U,
+    F2: FnMut(&Node<T>, R, &[U]) -> U,
 {
     node: &'a Node<T>,
     pre: F1,
