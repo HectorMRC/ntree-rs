@@ -85,7 +85,7 @@ where
     F1: FnMut(&Node<T>, &R) -> R,
     F2: FnMut(&Node<T>, R, &[U]) -> U,
 {
-    /// Traverses the tree executing both associated closures.
+    /// Traverses the tree calling both associated closures when corresponding.
     pub fn traverse(mut self, base: R) -> Traverse<'a, T, Synchronous> {
         fn traverse_immersion<T, R, U, F1, F2>(
             root: &Node<T>,
