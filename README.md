@@ -8,4 +8,4 @@
 A mutable n-ary tree with async support.
 
 ## About
-This library provides a simple way to define, mutate and traverse trees of an arbitrary and non-constant arity. In addition, regarding to traversal algorithms, four different implementations are included: the mutable and immutable approaches, as well as the synchronous and asynchronous strategies for both of them.
+This library provides a simple way to define, mutate and traverse trees of an arbitrary and non-constant arity. In addition, regarding to traversal algorithms, six different implementations are included: the immutable, mutable and owned approaches, as well as the synchronous and asynchronous strategies for each of them.
