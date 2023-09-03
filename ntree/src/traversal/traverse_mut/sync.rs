@@ -2,7 +2,7 @@
 
 use crate::{
     traversal::{macros, TraverseMut},
-    Asynchronous, Node, Synchronous, TraverseOwned,
+    Asynchronous, InPostMut, InPreMut, Node, PreTravMut, Synchronous, TraverseOwned,
 };
 use std::marker::PhantomData;
 
@@ -27,6 +27,34 @@ impl<'a, T> TraverseMut<'a, T, Synchronous> {
     macros::map!(&mut Node<T>, iter_mut);
     macros::reduce!(&mut Node<T>, iter_mut);
     macros::cascade!(&mut Node<T>, iter_mut);
+}
+
+impl<'a, T> InPreMut<'a, T, Synchronous> {
+    macros::map_pre!(&mut Node<T>, iter_mut);
+    macros::cascade!(&mut Node<T>, iter_mut);
+
+    /// Determines a closure to be executed in `pre-order` when traversing the tree.
+    pub fn with<R, F>(self, pre: F) -> PreTravMut<'a, T, R, F, Synchronous> {
+        PreTravMut {
+            node: self.node,
+            pre,
+            r: PhantomData,
+            strategy: PhantomData,
+        }
+    }
+}
+
+impl<'a, T, R, F> PreTravMut<'a, T, R, F, Synchronous>
+where
+    F: FnMut(&Node<T>, &R) -> R,
+{
+    macros::reduce_pre_post!(&mut Node<T>, iter_mut);
+    macros::map_pre_post!(&mut Node<T>, iter_mut);
+}
+
+impl<'a, T, S> InPostMut<'a, T, S> {
+    macros::reduce!(&mut Node<T>, iter_mut);
+    macros::map_post!(&mut Node<T>, iter_mut);
 }
 
 #[cfg(test)]

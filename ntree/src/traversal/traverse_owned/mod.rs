@@ -9,7 +9,7 @@ mod sync;
 pub use sync::*;
 
 use crate::{Asynchronous, Node, Synchronous};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Not};
 
 /// Implements the traverse algorithms for an owned instance of [`Node`].
 pub struct TraverseOwned<T, S> {
@@ -52,5 +52,155 @@ impl<T, S> TraverseOwned<T, S> {
 
     pub fn take(self) -> Node<T> {
         self.node
+    }
+
+    /// Returns the `pre-order` traversal entity for the tree.
+    pub fn pre(self) -> InPreOwned<T, S> {
+        InPreOwned {
+            next: vec![self.node],
+            strategy: PhantomData,
+        }
+    }
+
+    /// Returns the `post-order` traversal entity for the tree.
+    pub fn post(self) -> InPostOwned<T, S> {
+        InPostOwned {
+            next: vec![self.node],
+            strategy: PhantomData,
+        }
+    }
+}
+
+/// Represents the `pre-order` traversal.
+pub struct InPreOwned<T, S> {
+    next: Vec<Node<T>>,
+    strategy: PhantomData<S>,
+}
+
+impl<T, S> Iterator for InPreOwned<T, S> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.next.pop()?;
+        self.next.extend(current.children.into_iter().rev());
+        Some(current.value)
+    }
+}
+
+/// Implements the `pre-order` traversal.
+pub struct PreTravOwned<T, R, F, S> {
+    node: Node<T>,
+    pre: F,
+    r: PhantomData<R>,
+    strategy: PhantomData<S>,
+}
+
+impl<T, R, F, S> PreTravOwned<T, R, F, S> {
+    /// Determines a closure to be executed in `post-order` when traversing the tree.
+    pub fn post<U, P>(self, post: P) -> PrePostTravOwned<T, R, U, F, P, S> {
+        PrePostTravOwned {
+            node: self.node,
+            pre: self.pre,
+            post,
+            r: PhantomData,
+            u: PhantomData,
+            strategy: PhantomData,
+        }
+    }
+
+    /// Determines a closure to be executed in `post-order` when traversing the tree.
+    pub fn post_map<U, P>(self, post: P) -> PrePostMapOwned<T, R, U, F, P, S> {
+        PrePostMapOwned {
+            node: self.node,
+            pre: self.pre,
+            post,
+            r: PhantomData,
+            u: PhantomData,
+            strategy: PhantomData,
+        }
+    }
+}
+
+/// Represents the `post-order` traversal.
+pub struct InPostOwned<T, S> {
+    next: Vec<Node<T>>,
+    strategy: PhantomData<S>,
+}
+
+impl<T, S> Iterator for InPostOwned<T, S> {
+    type Item = Node<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut parent = self.next.pop()?;
+
+        if let Some(next_child) = parent
+            .children
+            .is_empty()
+            .not()
+            .then(|| parent.children.drain(0..1))
+            .and_then(|mut drain| drain.next())
+        {
+            self.next.push(parent);
+            self.next.push(next_child);
+            return self.next();
+        }
+
+        Some(parent)
+    }
+}
+
+/// Represents a combination of both pre and post traversals.
+pub struct PrePostTravOwned<T, R, U, F1, F2, S> {
+    node: Node<T>,
+    pre: F1,
+    post: F2,
+    r: PhantomData<R>,
+    u: PhantomData<U>,
+    strategy: PhantomData<S>,
+}
+
+/// Represents a combination of both pre and post map contructors.
+pub struct PrePostMapOwned<T, R, U, F1, F2, S> {
+    node: Node<T>,
+    pre: F1,
+    post: F2,
+    r: PhantomData<R>,
+    u: PhantomData<U>,
+    strategy: PhantomData<S>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::node;
+
+    #[test]
+    fn test_pre_order_traversal() {
+        let root = node!(
+            10,
+            node!(20, node!(40), node!(50), node!(60)),
+            node!(30, node!(70), node!(80))
+        );
+
+        let mut result = Vec::new();
+        root.into_traverse().pre().for_each(|n| result.push(n));
+
+        assert_eq!(result, vec![10, 20, 40, 50, 60, 30, 70, 80]);
+    }
+
+    #[test]
+    fn test_post_order_traversal() {
+        let root = node!(
+            10,
+            node!(20, node!(40), node!(50), node!(60)),
+            node!(30, node!(70), node!(80))
+        );
+
+        let mut result = Vec::new();
+        root.into_traverse()
+            .post()
+            .for_each(|n| result.push(n.value));
+
+        assert_eq!(result, vec![40, 50, 60, 20, 70, 80, 30, 10]);
     }
 }

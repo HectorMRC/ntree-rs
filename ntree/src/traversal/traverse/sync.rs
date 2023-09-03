@@ -1,8 +1,8 @@
 //! Synchronous traversal implementation.
 
 use crate::{
-    traversal::{macros, Traverse},
-    Asynchronous, Node, Synchronous, TraverseOwned, WithPost, WithPre, WithPrePost,
+    traversal::{macros, Traverse, TraverseOwned},
+    Asynchronous, InPost, InPre, Node, PrePost, Synchronous,
 };
 use std::marker::PhantomData;
 
@@ -35,81 +35,35 @@ impl<'a, T> Traverse<'a, T, Synchronous> {
     macros::cascade!(&Node<T>, iter);
 }
 
-impl<'a, T, R, F> WithPre<'a, T, R, F, Synchronous>
+impl<'a, T> InPre<'a, T, Synchronous> {
+    macros::cascade!(&Node<T>, iter);
+    macros::map_pre!(&Node<T>, iter);
+}
+
+impl<'a, T> InPost<'a, T, Synchronous> {
+    macros::reduce!(&Node<T>, iter);
+    macros::map_post!(&Node<T>, iter);
+
+    /// Determines a closure to be executed in `pre-order` when traversing the tree.
+    pub fn with_pre<R, F>(self, pre: F) -> PrePost<'a, T, R, F, Synchronous>
+    where
+        F: FnMut(&Node<T>, &R) -> R,
+    {
+        PrePost {
+            node: self.node,
+            pre,
+            r: PhantomData,
+            strategy: PhantomData,
+        }
+    }
+}
+
+impl<'a, T, R, F> PrePost<'a, T, R, F, Synchronous>
 where
     F: FnMut(&Node<T>, &R) -> R,
 {
-    /// Traverses the tree in pre-order calling the associated closure.
-    pub fn traverse(mut self, base: R) -> Traverse<'a, T, Synchronous> {
-        fn traverse_immersion<T, R, F>(root: &Node<T>, base: &R, f: &mut F)
-        where
-            F: FnMut(&Node<T>, &R) -> R,
-        {
-            let base = f(root, base);
-            root.children
-                .iter()
-                .for_each(|node| traverse_immersion(node, &base, f));
-        }
-
-        traverse_immersion(self.node, &base, &mut self.pre);
-        Traverse::new(self.node)
-    }
-}
-
-impl<'a, T, R, F> WithPost<'a, T, R, F, Synchronous>
-where
-    F: FnMut(&Node<T>, &[R]) -> R,
-{
-    /// Traverses the tree in post-order calling the associated closure.
-    pub fn traverse(mut self) -> Traverse<'a, T, Synchronous> {
-        fn traverse_immersion<T, R, F>(root: &Node<T>, f: &mut F) -> R
-        where
-            F: FnMut(&Node<T>, &[R]) -> R,
-        {
-            let children: Vec<R> = root
-                .children
-                .iter()
-                .map(|node| traverse_immersion(node, f))
-                .collect();
-
-            f(root, &children)
-        }
-
-        traverse_immersion(self.node, &mut self.post);
-        Traverse::new(self.node)
-    }
-}
-
-impl<'a, T, R, U, F1, F2> WithPrePost<'a, T, R, U, F1, F2, Synchronous>
-where
-    F1: FnMut(&Node<T>, &R) -> R,
-    F2: FnMut(&Node<T>, R, &[U]) -> U,
-{
-    /// Traverses the tree calling both associated closures when corresponding.
-    pub fn traverse(mut self, base: R) -> Traverse<'a, T, Synchronous> {
-        fn traverse_immersion<T, R, U, F1, F2>(
-            root: &Node<T>,
-            base: &R,
-            pre: &mut F1,
-            post: &mut F2,
-        ) -> U
-        where
-            F1: FnMut(&Node<T>, &R) -> R,
-            F2: FnMut(&Node<T>, R, &[U]) -> U,
-        {
-            let base = pre(root, base);
-            let children: Vec<U> = root
-                .children
-                .iter()
-                .map(|node| traverse_immersion(node, &base, pre, post))
-                .collect();
-
-            post(root, base, &children)
-        }
-
-        traverse_immersion(self.node, &base, &mut self.pre, &mut self.post);
-        Traverse::new(self.node)
-    }
+    macros::reduce_pre_post!(&Node<T>, iter);
+    macros::map_pre_post!(&Node<T>, iter);
 }
 
 #[cfg(test)]
@@ -160,5 +114,63 @@ mod tests {
         });
 
         assert_eq!(result, vec![10, 30, 70, 40, 90]);
+    }
+
+    #[test]
+    fn test_traverse_pre() {
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.traverse().pre().cascade(0, |current, parent| {
+            result.push(current.value + *parent);
+            current.value + *parent
+        });
+
+        assert_eq!(result, vec![10, 30, 70, 40, 90]);
+    }
+
+    #[test]
+    fn test_collapse_pre() {
+        let original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+
+        let copy = original.clone();
+        let new_root = copy
+            .traverse()
+            .pre()
+            .map(true, |child, parent| *parent && child.value % 2 != 0);
+
+        assert_eq!(original, copy);
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root, want);
+    }
+
+    #[test]
+    fn test_traverse_post() {
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.traverse().post().reduce(|current, children| {
+            result.push(current.value + children.len());
+            current.value + children.len()
+        });
+
+        assert_eq!(result, vec![40, 21, 50, 31, 12]);
+    }
+
+    #[test]
+    fn test_collapse_post() {
+        let original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+
+        let copy = original.clone();
+        let new_root = copy
+            .traverse()
+            .pre()
+            .map(true, |child, parent| *parent && child.value % 2 != 0);
+
+        assert_eq!(original, copy);
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root, want);
     }
 }
