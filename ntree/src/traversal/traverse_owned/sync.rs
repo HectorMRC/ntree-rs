@@ -185,7 +185,7 @@ impl<T> InPostOwned<T, Synchronous> {
     /// Determines a closure to be executed in `pre-order` when traversing the tree.
     pub fn with_pre<R, F>(mut self, pre: F) -> PrePostOwned<T, R, F, Synchronous>
     where
-        F: FnMut(&mut T, &R) -> R,
+        F: FnMut(&mut Node<T>, &R) -> R,
     {
         PrePostOwned {
             node: self.next.remove(0),
@@ -198,13 +198,13 @@ impl<T> InPostOwned<T, Synchronous> {
 
 impl<T, R, F> PrePostOwned<T, R, F, Synchronous>
 where
-    F: FnMut(&mut T, &R) -> R,
+    F: FnMut(&mut Node<T>, &R) -> R,
 {
     /// Traverses the tree calling both associated closures when corresponding.
     /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
     pub fn reduce<U, P>(mut self, base: R, mut post: P) -> U
     where
-        F: FnMut(&mut T, &R) -> R,
+        F: FnMut(&mut Node<T>, &R) -> R,
         P: FnMut(T, R, &[U]) -> U,
     {
         fn reduce_immersion<T, R, U, F1, F2>(
@@ -214,10 +214,10 @@ where
             post: &mut F2,
         ) -> U
         where
-            F1: FnMut(&mut T, &R) -> R,
+            F1: FnMut(&mut Node<T>, &R) -> R,
             F2: FnMut(T, R, &[U]) -> U,
         {
-            let base = pre(&mut root.value, base);
+            let base = pre(&mut root, base);
             let children: Vec<U> = root
                 .children
                 .into_iter()
@@ -234,7 +234,7 @@ where
     /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
     pub fn map<U, P>(mut self, base: R, mut post: P) -> Node<U>
     where
-        F: FnMut(&mut T, &R) -> R,
+        F: FnMut(&mut Node<T>, &R) -> R,
         P: FnMut(T, R, &[Node<U>]) -> U,
     {
         fn map_immersion<T, R, U, F1, F2>(
@@ -244,10 +244,10 @@ where
             post: &mut F2,
         ) -> Node<U>
         where
-            F1: FnMut(&mut T, &R) -> R,
+            F1: FnMut(&mut Node<T>, &R) -> R,
             F2: FnMut(T, R, &[Node<U>]) -> U,
         {
-            let base = pre(&mut root.value, base);
+            let base = pre(&mut root, base);
             let children: Vec<Node<U>> = root
                 .children
                 .into_iter()
@@ -263,8 +263,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Add;
-
     use super::*;
     use crate::node;
 
@@ -374,7 +372,7 @@ mod tests {
         let mut result = Vec::new();
         root.into_traverse()
             .post()
-            .with_pre(|current, base| current.add(base))
+            .with_pre(|current, base| current.value + *base)
             .reduce(0, |_, base, children| {
                 result.push(children.len() + base);
                 children.len() + base
@@ -389,7 +387,7 @@ mod tests {
         let new_root = original
             .into_traverse()
             .post()
-            .with_pre(|current, base| current.add(base))
+            .with_pre(|current, base| current.value + *base)
             .map(0, |_, base, _| base % 2 == 0);
 
         let want = node!(false, node!(false, node!(true)), node!(true, node!(false)));
