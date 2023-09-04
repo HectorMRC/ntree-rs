@@ -1,7 +1,7 @@
 //! Synchronous traversal implementation.
 
 use crate::{
-    traversal::{macros, Traverse, TraverseOwned},
+    traversal::{macros, Traverse},
     Asynchronous, InPost, InPre, Node, PrePost, Synchronous,
 };
 use std::marker::PhantomData;

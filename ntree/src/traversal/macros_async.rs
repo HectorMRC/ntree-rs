@@ -28,12 +28,12 @@ macro_rules! for_each {
 macro_rules! map {
     ($node:ty, $iter:tt) => {
         #[async_recursion]
-        async fn map_immersion<F, R>(root: $node, f: &F) -> Node<R>
+        async fn map_immersion<F, R>(root: $node, f: &F) -> $crate::Node<R>
         where
             F: Fn($node) -> R + Sync + Send,
             R: Sized + Sync + Send,
         {
-            Node::new(f(root)).with_children(
+            $crate::Node::new(f(root)).with_children(
                 join_all(
                     root.children
                         .$iter()
@@ -45,12 +45,12 @@ macro_rules! map {
 
         /// Builds a new tree by calling the given closure along the tree rooted by self following the
         /// pre-order traversal.
-        pub async fn map<F, R>(self, f: F) -> TraverseOwned<R, Asynchronous>
+        pub async fn map<F, R>(self, f: F) -> $crate::TraverseOwned<R, Asynchronous>
         where
             F: Fn($node) -> R + Sync + Send,
             R: Sized + Sync + Send,
         {
-            TraverseOwned::new_async(Self::map_immersion(self.node, &f).await)
+            $crate::TraverseOwned::new_async(Self::map_immersion(self.node, &f).await)
         }
     };
 }
@@ -103,7 +103,7 @@ macro_rules! cascade {
 
         /// Calls the given closure along the tree rooted by self, providing the parent's
         /// data to its children.
-        pub async fn cascade<F, R>(&self, base: R, f: F)
+        pub async fn cascade<F, R>(self, base: R, f: F)
         where
             F: Fn($node, &R) -> R + Sync + Send,
             R: Sized + Sync + Send,

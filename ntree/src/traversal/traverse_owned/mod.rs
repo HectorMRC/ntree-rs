@@ -87,40 +87,6 @@ impl<T, S> Iterator for InPreOwned<T, S> {
     }
 }
 
-/// Implements the `pre-order` traversal.
-pub struct PreTravOwned<T, R, F, S> {
-    node: Node<T>,
-    pre: F,
-    r: PhantomData<R>,
-    strategy: PhantomData<S>,
-}
-
-impl<T, R, F, S> PreTravOwned<T, R, F, S> {
-    /// Determines a closure to be executed in `post-order` when traversing the tree.
-    pub fn post<U, P>(self, post: P) -> PrePostTravOwned<T, R, U, F, P, S> {
-        PrePostTravOwned {
-            node: self.node,
-            pre: self.pre,
-            post,
-            r: PhantomData,
-            u: PhantomData,
-            strategy: PhantomData,
-        }
-    }
-
-    /// Determines a closure to be executed in `post-order` when traversing the tree.
-    pub fn post_map<U, P>(self, post: P) -> PrePostMapOwned<T, R, U, F, P, S> {
-        PrePostMapOwned {
-            node: self.node,
-            pre: self.pre,
-            post,
-            r: PhantomData,
-            u: PhantomData,
-            strategy: PhantomData,
-        }
-    }
-}
-
 /// Represents the `post-order` traversal.
 pub struct InPostOwned<T, S> {
     next: Vec<Node<T>>,
@@ -149,23 +115,11 @@ impl<T, S> Iterator for InPostOwned<T, S> {
     }
 }
 
-/// Represents a combination of both pre and post traversals.
-pub struct PrePostTravOwned<T, R, U, F1, F2, S> {
+/// Implements both traversals at once.
+pub struct PrePostOwned<T, R, F, S> {
     node: Node<T>,
-    pre: F1,
-    post: F2,
+    pre: F,
     r: PhantomData<R>,
-    u: PhantomData<U>,
-    strategy: PhantomData<S>,
-}
-
-/// Represents a combination of both pre and post map contructors.
-pub struct PrePostMapOwned<T, R, U, F1, F2, S> {
-    node: Node<T>,
-    pre: F1,
-    post: F2,
-    r: PhantomData<R>,
-    u: PhantomData<U>,
     strategy: PhantomData<S>,
 }
 

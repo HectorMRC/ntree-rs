@@ -25,7 +25,7 @@ macro_rules! for_each {
 macro_rules! map {
     ($node:ty, $iter:tt) => {
         /// Traverses the tree rooted by self in `pre-order`, building a new tree by calling the given closure along the way.
-        pub fn map<F, R>(self, mut f: F) -> TraverseOwned<R, Synchronous>
+        pub fn map<F, R>(self, mut f: F) -> $crate::TraverseOwned<R, Synchronous>
         where
             F: FnMut($node) -> R,
         {
@@ -33,7 +33,7 @@ macro_rules! map {
             where
                 F: FnMut($node) -> R,
             {
-                Node::new(f(root)).with_children(
+                $crate::Node::new(f(root)).with_children(
                     root.children
                         .$iter()
                         .map(|child| map_immersion::<T, F, R>(child, f))
@@ -41,7 +41,7 @@ macro_rules! map {
                 )
             }
 
-            TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
+            $crate::TraverseOwned::new(map_immersion::<T, F, R>(self.node, &mut f))
         }
     };
 }
@@ -99,11 +99,11 @@ macro_rules! cascade {
 macro_rules! map_pre {
     ($node:ty, $iter:tt) => {
         /// Traverses the tree in `pre-order`, building a new tree by calling the given closure along the way.
-        pub fn map<R, F>(self, base: R, mut pre: F) -> Node<R>
+        pub fn map<R, F>(self, base: R, mut pre: F) -> $crate::Node<R>
         where
             F: FnMut($node, &R) -> R,
         {
-            fn map_immersion<T, R, F>(root: $node, base: &R, f: &mut F) -> Node<R>
+            fn map_immersion<T, R, F>(root: $node, base: &R, f: &mut F) -> $crate::Node<R>
             where
                 F: FnMut($node, &R) -> R,
             {
@@ -125,21 +125,21 @@ macro_rules! map_pre {
 macro_rules! map_post {
     ($node:ty, $iter:tt) => {
         /// Traverses the tree in `post-order`, building a new tree by calling the given closure along the way.
-        pub fn map<F, R>(self, mut post: F) -> Node<R>
+        pub fn map<F, R>(self, mut post: F) -> $crate::Node<R>
         where
-            F: FnMut($node, &[Node<R>]) -> R,
+            F: FnMut($node, &[$crate::Node<R>]) -> R,
         {
-            fn map_immersion<T, R, F>(root: $node, f: &mut F) -> Node<R>
+            fn map_immersion<T, R, F>(root: $node, f: &mut F) -> $crate::Node<R>
             where
-                F: FnMut($node, &[Node<R>]) -> R,
+                F: FnMut($node, &[$crate::Node<R>]) -> R,
             {
-                let children: Vec<Node<R>> = root
+                let children: Vec<$crate::Node<R>> = root
                     .children
                     .$iter()
                     .map(|node| map_immersion(node, f))
                     .collect();
 
-                Node::new(f(root, &children)).with_children(children)
+                $crate::Node::new(f(root, &children)).with_children(children)
             }
 
             map_immersion(self.node, &mut post)
@@ -185,29 +185,29 @@ macro_rules! map_pre_post {
     ($node:ty, $iter:tt) => {
         /// Traverses the tree in both orders, building a new tree by calling the post closure along the way.
         /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
-        pub fn map<U, P>(mut self, base: R, mut post: P) -> Node<U>
+        pub fn map<U, P>(mut self, base: R, mut post: P) -> $crate::Node<U>
         where
             F: FnMut($node, &R) -> R,
-            P: FnMut($node, R, &[Node<U>]) -> U,
+            P: FnMut($node, R, &[$crate::Node<U>]) -> U,
         {
             fn map_immersion<T, R, U, F1, F2>(
                 root: $node,
                 base: &R,
                 pre: &mut F1,
                 post: &mut F2,
-            ) -> Node<U>
+            ) -> $crate::Node<U>
             where
                 F1: FnMut($node, &R) -> R,
-                F2: FnMut($node, R, &[Node<U>]) -> U,
+                F2: FnMut($node, R, &[$crate::Node<U>]) -> U,
             {
                 let base = pre(root, base);
-                let children: Vec<Node<U>> = root
+                let children: Vec<$crate::Node<U>> = root
                     .children
                     .$iter()
                     .map(|node| map_immersion(node, &base, pre, post))
                     .collect();
 
-                Node::new(post(root, base, &children)).with_children(children)
+                $crate::Node::new(post(root, base, &children)).with_children(children)
             }
 
             map_immersion(self.node, &base, &mut self.pre, &mut post)

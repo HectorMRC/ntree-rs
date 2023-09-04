@@ -72,16 +72,16 @@ pub struct InPreMut<'a, T, S> {
     strategy: PhantomData<S>,
 }
 
-/// Implements the `pre-order` traversal.
-pub struct PreTravMut<'a, T, R, F, S> {
-    node: &'a mut Node<T>,
-    pre: F,
-    r: PhantomData<R>,
-    strategy: PhantomData<S>,
-}
-
 /// Represents the `post-order` traversal.
 pub struct InPostMut<'a, T, S> {
     node: &'a mut Node<T>,
+    strategy: PhantomData<S>,
+}
+
+/// Implements both traversals at once.
+pub struct PrePostMut<'a, T, R, F, S> {
+    node: &'a mut Node<T>,
+    pre: F,
+    r: PhantomData<R>,
     strategy: PhantomData<S>,
 }
