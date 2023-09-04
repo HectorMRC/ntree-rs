@@ -205,7 +205,7 @@ where
     pub fn reduce<U, P>(mut self, base: R, mut post: P) -> U
     where
         F: FnMut(&mut Node<T>, &R) -> R,
-        P: FnMut(T, R, &[U]) -> U,
+        P: FnMut(T, R, Vec<U>) -> U,
     {
         fn reduce_immersion<T, R, U, F1, F2>(
             mut root: Node<T>,
@@ -215,7 +215,7 @@ where
         ) -> U
         where
             F1: FnMut(&mut Node<T>, &R) -> R,
-            F2: FnMut(T, R, &[U]) -> U,
+            F2: FnMut(T, R, Vec<U>) -> U,
         {
             let base = pre(&mut root, base);
             let children: Vec<U> = root
@@ -224,7 +224,7 @@ where
                 .map(|node| reduce_immersion(node, &base, pre, post))
                 .collect();
 
-            post(root.value, base, &children)
+            post(root.value, base, children)
         }
 
         reduce_immersion(self.node, &base, &mut self.pre, &mut post)
