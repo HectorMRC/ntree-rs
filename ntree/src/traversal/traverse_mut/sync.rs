@@ -39,7 +39,10 @@ impl<'a, T, S> InPostMut<'a, T, S> {
     macros::map_post!(&mut Node<T>, iter_mut);
 
     /// Determines a closure to be executed in `pre-order` when traversing the tree.
-    pub fn with_pre<R, F>(self, pre: F) -> PrePostMut<'a, T, R, F, Synchronous> {
+    pub fn with_pre<R, F>(self, pre: F) -> PrePostMut<'a, T, R, F, Synchronous>
+    where
+        F: FnMut(&mut Node<T>, &R) -> R,
+    {
         PrePostMut {
             node: self.node,
             pre,
@@ -51,7 +54,7 @@ impl<'a, T, S> InPostMut<'a, T, S> {
 
 impl<'a, T, R, F> PrePostMut<'a, T, R, F, Synchronous>
 where
-    F: FnMut(&Node<T>, &R) -> R,
+    F: FnMut(&mut Node<T>, &R) -> R,
 {
     macros::reduce_pre_post!(&mut Node<T>, iter_mut);
     macros::map_pre_post!(&mut Node<T>, iter_mut);
@@ -112,10 +115,118 @@ mod tests {
             next
         });
 
-        assert_eq!(root.value, 0);
-        assert_eq!(root.children[0].value, 10);
-        assert_eq!(root.children[1].value, 10);
-        assert_eq!(root.children[0].children[0].value, 30);
-        assert_eq!(root.children[1].children[0].value, 40);
+        let want = node!(0, node!(10, node!(30)), node!(10, node!(40)));
+        assert_eq!(root, want);
+    }
+
+    #[test]
+    fn test_cascade_pre() {
+        let mut root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.traverse_mut().pre().cascade(0, |current, parent| {
+            result.push(current.value + *parent);
+            current.value += 1;
+
+            current.value + *parent
+        });
+
+        assert_eq!(result, vec![10, 31, 72, 41, 92]);
+
+        let want = node!(11, node!(21, node!(41)), node!(31, node!(51)));
+        assert_eq!(root, want);
+    }
+
+    #[test]
+    fn test_map_pre() {
+        let mut original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+        let new_root = original.traverse_mut().pre().map(true, |child, parent| {
+            child.value += 1;
+            *parent && child.value % 2 == 0
+        });
+
+        let want = node!(2, node!(3, node!(6)), node!(4, node!(6)));
+        assert_eq!(original, want);
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root, want);
+    }
+
+    #[test]
+    fn test_reduce_post() {
+        let mut root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.traverse_mut().post().reduce(|current, children| {
+            result.push(current.value + children.len());
+            current.value += 1;
+            current.value + children.len()
+        });
+
+        assert_eq!(result, vec![40, 21, 50, 31, 12]);
+
+        let want = node!(11, node!(21, node!(41)), node!(31, node!(51)));
+        assert_eq!(root, want);
+    }
+
+    #[test]
+    fn test_map_post() {
+        let mut original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+        let new_root = original.traverse_mut().pre().map(true, |child, parent| {
+            child.value += 1;
+            *parent && child.value % 2 == 0
+        });
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root, want);
+
+        let want = node!(2, node!(3, node!(6)), node!(4, node!(6)));
+        assert_eq!(original, want);
+    }
+
+    #[test]
+    fn test_reduce_pre_post() {
+        let mut root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.traverse_mut()
+            .post()
+            .with_pre(|current, base| {
+                current.value += 1;
+                current.value + base
+            })
+            .reduce(0, |current, base, children| {
+                result.push(current.value + children.len() + base);
+                current.value += 1;
+                current.value + children.len() + base
+            });
+
+        assert_eq!(result, vec![114, 54, 144, 74, 24]);
+
+        let want = node!(12, node!(22, node!(42)), node!(32, node!(52)));
+        assert_eq!(root, want);
+    }
+
+    #[test]
+    fn test_map_pre_post() {
+        let mut original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+
+        let new_root = original
+            .traverse_mut()
+            .post()
+            .with_pre(|current, base| {
+                current.value += 1;
+                current.value + base
+            })
+            .map(0, |current, base, _| {
+                current.value += 1;
+                current.value % 2 != 0 && base % 2 == 0
+            });
+
+        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root, want);
+
+        let want = node!(3, node!(4, node!(7)), node!(5, node!(7)));
+        assert_eq!(original, want);
     }
 }

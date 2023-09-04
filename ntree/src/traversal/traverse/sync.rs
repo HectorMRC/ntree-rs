@@ -117,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn test_traverse_pre() {
+    fn test_cascade_pre() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();
@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_collapse_pre() {
+    fn test_map_pre() {
         let original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
 
         let copy = original.clone();
@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn test_traverse_post() {
+    fn test_reduce_post() {
         let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
 
         let mut result = Vec::new();
@@ -159,7 +159,7 @@ mod tests {
     }
 
     #[test]
-    fn test_collapse_post() {
+    fn test_map_post() {
         let original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
 
         let copy = original.clone();
@@ -171,6 +171,41 @@ mod tests {
         assert_eq!(original, copy);
 
         let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        assert_eq!(new_root, want);
+    }
+
+    #[test]
+    fn test_reduce_pre_post() {
+        let root = node!(10, node!(20, node!(40)), node!(30, node!(50)));
+
+        let mut result = Vec::new();
+        root.traverse()
+            .post()
+            .with_pre(|current, base| current.value + base)
+            .reduce(0, |current, base, children| {
+                result.push(current.value + children.len() + base);
+                current.value + children.len() + base
+            });
+
+        assert_eq!(result, vec![110, 51, 140, 71, 22]);
+    }
+
+    #[test]
+    fn test_map_pre_post() {
+        let original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+
+        let copy = original.clone();
+        let new_root = copy
+            .traverse()
+            .post()
+            .with_pre(|current, base| current.value + base)
+            .map(0, |current, base, _| {
+                current.value % 2 != 0 && base % 2 == 0
+            });
+
+        assert_eq!(original, copy);
+
+        let want = node!(false, node!(false, node!(true)), node!(true, node!(false)));
         assert_eq!(new_root, want);
     }
 }
