@@ -165,12 +165,12 @@ mod tests {
         let copy = original.clone();
         let new_root = copy
             .traverse()
-            .pre()
-            .map(true, |child, parent| *parent && child.value % 2 != 0);
+            .post()
+            .map(|current, _| current.value % 2 != 0);
 
         assert_eq!(original, copy);
 
-        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        let want = node!(true, node!(false, node!(true)), node!(true, node!(true)));
         assert_eq!(new_root, want);
     }
 

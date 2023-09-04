@@ -172,12 +172,12 @@ mod tests {
     #[test]
     fn test_map_post() {
         let mut original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
-        let new_root = original.traverse_mut().pre().map(true, |child, parent| {
-            child.value += 1;
-            *parent && child.value % 2 == 0
+        let new_root = original.traverse_mut().post().map(|current, _| {
+            current.value += 1;
+            current.value % 2 == 0
         });
 
-        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        let want = node!(true, node!(false, node!(true)), node!(true, node!(true)));
         assert_eq!(new_root, want);
 
         let want = node!(2, node!(3, node!(6)), node!(4, node!(6)));

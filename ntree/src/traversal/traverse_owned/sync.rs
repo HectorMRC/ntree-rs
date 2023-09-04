@@ -185,7 +185,7 @@ impl<T> InPostOwned<T, Synchronous> {
     /// Determines a closure to be executed in `pre-order` when traversing the tree.
     pub fn with_pre<R, F>(mut self, pre: F) -> PrePostOwned<T, R, F, Synchronous>
     where
-        F: FnMut(T, &R) -> R,
+        F: FnMut(&mut T, &R) -> R,
     {
         PrePostOwned {
             node: self.next.remove(0),
@@ -198,33 +198,33 @@ impl<T> InPostOwned<T, Synchronous> {
 
 impl<T, R, F> PrePostOwned<T, R, F, Synchronous>
 where
-    F: FnMut(T, &R) -> R,
+    F: FnMut(&mut T, &R) -> R,
 {
     /// Traverses the tree calling both associated closures when corresponding.
     /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
     pub fn reduce<U, P>(mut self, base: R, mut post: P) -> U
     where
-        F: FnMut(T, &R) -> R,
-        P: FnMut(R, &[U]) -> U,
+        F: FnMut(&mut T, &R) -> R,
+        P: FnMut(T, R, &[U]) -> U,
     {
         fn reduce_immersion<T, R, U, F1, F2>(
-            root: Node<T>,
+            mut root: Node<T>,
             base: &R,
             pre: &mut F1,
             post: &mut F2,
         ) -> U
         where
-            F1: FnMut(T, &R) -> R,
-            F2: FnMut(R, &[U]) -> U,
+            F1: FnMut(&mut T, &R) -> R,
+            F2: FnMut(T, R, &[U]) -> U,
         {
-            let base = pre(root.value, base);
+            let base = pre(&mut root.value, base);
             let children: Vec<U> = root
                 .children
                 .into_iter()
                 .map(|node| reduce_immersion(node, &base, pre, post))
                 .collect();
 
-            post(base, &children)
+            post(root.value, base, &children)
         }
 
         reduce_immersion(self.node, &base, &mut self.pre, &mut post)
@@ -234,27 +234,27 @@ where
     /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
     pub fn map<U, P>(mut self, base: R, mut post: P) -> Node<U>
     where
-        F: FnMut(T, &R) -> R,
-        P: FnMut(R, &[Node<U>]) -> U,
+        F: FnMut(&mut T, &R) -> R,
+        P: FnMut(T, R, &[Node<U>]) -> U,
     {
         fn map_immersion<T, R, U, F1, F2>(
-            root: Node<T>,
+            mut root: Node<T>,
             base: &R,
             pre: &mut F1,
             post: &mut F2,
         ) -> Node<U>
         where
-            F1: FnMut(T, &R) -> R,
-            F2: FnMut(R, &[Node<U>]) -> U,
+            F1: FnMut(&mut T, &R) -> R,
+            F2: FnMut(T, R, &[Node<U>]) -> U,
         {
-            let base = pre(root.value, base);
+            let base = pre(&mut root.value, base);
             let children: Vec<Node<U>> = root
                 .children
                 .into_iter()
                 .map(|node| map_immersion(node, &base, pre, post))
                 .collect();
 
-            Node::new(post(base, &children)).with_children(children)
+            Node::new(post(root.value, base, &children)).with_children(children)
         }
 
         map_immersion(self.node, &base, &mut self.pre, &mut post)
@@ -263,6 +263,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Add;
+
     use super::*;
     use crate::node;
 
@@ -358,10 +360,10 @@ mod tests {
 
         let new_root = original
             .into_traverse()
-            .pre()
-            .map(true, |child, parent| *parent && child % 2 != 0);
+            .post()
+            .map(|current, _| current % 2 != 0);
 
-        let want = node!(true, node!(false, node!(false)), node!(true, node!(true)));
+        let want = node!(true, node!(false, node!(true)), node!(true, node!(true)));
         assert_eq!(new_root, want);
     }
 
@@ -372,8 +374,8 @@ mod tests {
         let mut result = Vec::new();
         root.into_traverse()
             .post()
-            .with_pre(|current, base| current + *base)
-            .reduce(0, |base, children| {
+            .with_pre(|current, base| current.add(base))
+            .reduce(0, |_, base, children| {
                 result.push(children.len() + base);
                 children.len() + base
             });
@@ -387,8 +389,8 @@ mod tests {
         let new_root = original
             .into_traverse()
             .post()
-            .with_pre(|current, base| current + base)
-            .map(0, |base, _| base % 2 == 0);
+            .with_pre(|current, base| current.add(base))
+            .map(0, |_, base, _| base % 2 == 0);
 
         let want = node!(false, node!(false, node!(true)), node!(true, node!(false)));
         assert_eq!(new_root, want);
