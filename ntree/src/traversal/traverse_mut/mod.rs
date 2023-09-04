@@ -48,4 +48,40 @@ impl<'a, T, S> TraverseMut<'a, T, S> {
     pub fn node_mut(&mut self) -> &mut Node<T> {
         self.node
     }
+
+    /// Returns the `pre-order` traversal entity for the tree.
+    pub fn pre(self) -> InPreMut<'a, T, S> {
+        InPreMut {
+            node: self.node,
+            strategy: PhantomData,
+        }
+    }
+
+    /// Returns the `post-order` traversal entity for the tree.
+    pub fn post(self) -> InPostMut<'a, T, S> {
+        InPostMut {
+            node: self.node,
+            strategy: PhantomData,
+        }
+    }
+}
+
+/// Represents the `pre-order` traversal.
+pub struct InPreMut<'a, T, S> {
+    node: &'a mut Node<T>,
+    strategy: PhantomData<S>,
+}
+
+/// Represents the `post-order` traversal.
+pub struct InPostMut<'a, T, S> {
+    node: &'a mut Node<T>,
+    strategy: PhantomData<S>,
+}
+
+/// Implements both traversals at once.
+pub struct PrePostMut<'a, T, R, F, S> {
+    node: &'a mut Node<T>,
+    pre: F,
+    r: PhantomData<R>,
+    strategy: PhantomData<S>,
 }
