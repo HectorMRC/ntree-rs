@@ -164,11 +164,11 @@ impl<T> InPostOwned<T, Synchronous> {
     /// Traverses the tree in `post-order`, building a new tree by calling the given closure along the way.
     pub fn map<R, F>(mut self, mut post: F) -> Node<R>
     where
-        F: FnMut(T, &mut [Node<R>]) -> R,
+        F: FnMut(T, &mut Vec<Node<R>>) -> R,
     {
         fn map_immersion<T, R, F>(root: Node<T>, f: &mut F) -> Node<R>
         where
-            F: FnMut(T, &mut [Node<R>]) -> R,
+            F: FnMut(T, &mut Vec<Node<R>>) -> R,
         {
             let mut children: Vec<Node<R>> = root
                 .children
@@ -204,8 +204,7 @@ where
     /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
     pub fn reduce<U, P>(mut self, base: R, mut post: P) -> U
     where
-        F: FnMut(&mut Node<T>, &R) -> R,
-        P: FnMut(T, R, Vec<U>) -> U,
+        P: FnMut(T, &R, Vec<U>) -> U,
     {
         fn reduce_immersion<T, R, U, F1, F2>(
             mut root: Node<T>,
@@ -215,7 +214,7 @@ where
         ) -> U
         where
             F1: FnMut(&mut Node<T>, &R) -> R,
-            F2: FnMut(T, R, Vec<U>) -> U,
+            F2: FnMut(T, &R, Vec<U>) -> U,
         {
             let base = pre(&mut root, base);
             let children: Vec<U> = root
@@ -224,7 +223,7 @@ where
                 .map(|node| reduce_immersion(node, &base, pre, post))
                 .collect();
 
-            post(root.value, base, children)
+            post(root.value, &base, children)
         }
 
         reduce_immersion(self.node, &base, &mut self.pre, &mut post)
@@ -234,8 +233,7 @@ where
     /// Returns the latest result given by the post closure, which value correspond to the root of the tree.
     pub fn map<U, P>(mut self, base: R, mut post: P) -> Node<U>
     where
-        F: FnMut(&mut Node<T>, &R) -> R,
-        P: FnMut(T, R, &mut [Node<U>]) -> U,
+        P: FnMut(T, &R, &mut Vec<Node<U>>) -> U,
     {
         fn map_immersion<T, R, U, F1, F2>(
             mut root: Node<T>,
@@ -245,7 +243,7 @@ where
         ) -> Node<U>
         where
             F1: FnMut(&mut Node<T>, &R) -> R,
-            F2: FnMut(T, R, &mut [Node<U>]) -> U,
+            F2: FnMut(T, &R, &mut Vec<Node<U>>) -> U,
         {
             let base = pre(&mut root, base);
             let mut children: Vec<Node<U>> = root
@@ -254,7 +252,7 @@ where
                 .map(|node| map_immersion(node, &base, pre, post))
                 .collect();
 
-            Node::new(post(root.value, base, &mut children)).with_children(children)
+            Node::new(post(root.value, &base, &mut children)).with_children(children)
         }
 
         map_immersion(self.node, &base, &mut self.pre, &mut post)
@@ -393,4 +391,25 @@ mod tests {
         let want = node!(false, node!(false, node!(true)), node!(true, node!(false)));
         assert_eq!(new_root, want);
     }
+
+    // #[test]
+    // fn test_owned_lifetime() {
+    //     struct Context<'a> {
+    //         parent: Option<&'a Context<'a>>,
+    //     }
+
+    //     impl<'a> Context<'a> {
+    //         fn clone(&'a self) -> Self {
+    //             Self { parent: Some(self) }
+    //         }
+    //     }
+
+    //     let ctx = Context { parent: None };
+    //     let original = node!(1, node!(2, node!(5)), node!(3, node!(5)));
+    //     let new_root = original
+    //         .into_traverse()
+    //         .post()
+    //         .with_pre(|current, ctx| ctx.clone())
+    //         .map(ctx, |_, ctx, _| ctx.parent.is_some());
+    // }
 }
